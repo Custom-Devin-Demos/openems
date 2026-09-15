@@ -1,10 +1,18 @@
 package io.openems.common.types;
 
+import java.util.regex.Pattern;
+
 import io.openems.common.exceptions.OpenemsError;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.utils.StringUtils;
 
 public class ChannelAddress implements Comparable<ChannelAddress> {
+
+	/**
+	 * Allowed characters for Component-ID and Channel-ID when parsed from an
+	 * untrusted String. Includes '*' for wildcard patterns.
+	 */
+	private static final Pattern VALID_ID = Pattern.compile("[A-Za-z0-9_.*-]+");
 
 	private final String componentId;
 	private final String channelId;
@@ -51,14 +59,19 @@ public class ChannelAddress implements Comparable<ChannelAddress> {
 	 * @throws OpenemsNamedException on parse error
 	 */
 	public static ChannelAddress fromString(String address) throws OpenemsNamedException {
-		try {
-			var addressArray = address.split("/");
-			var componentId = addressArray[0];
-			var channelId = addressArray[1];
-			return new ChannelAddress(componentId, channelId, address);
-		} catch (Exception e) {
+		if (address == null) {
+			throw OpenemsError.COMMON_NO_VALID_CHANNEL_ADDRESS.exception("null");
+		}
+		var addressArray = address.split("/", -1);
+		if (addressArray.length != 2) {
 			throw OpenemsError.COMMON_NO_VALID_CHANNEL_ADDRESS.exception(address);
 		}
+		var componentId = addressArray[0];
+		var channelId = addressArray[1];
+		if (!VALID_ID.matcher(componentId).matches() || !VALID_ID.matcher(channelId).matches()) {
+			throw OpenemsError.COMMON_NO_VALID_CHANNEL_ADDRESS.exception(address);
+		}
+		return new ChannelAddress(componentId, channelId, address);
 	}
 
 	@Override

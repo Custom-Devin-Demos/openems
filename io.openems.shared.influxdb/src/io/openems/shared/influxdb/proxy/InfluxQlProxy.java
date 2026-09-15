@@ -242,7 +242,7 @@ public class InfluxQlProxy extends QueryProxy {
 		// Prepare query string
 		var b = new StringBuilder("SELECT ") //
 				.append(channels.stream() //
-						.map(c -> "MEAN(\"" + c.toString() + "\") AS \"" + c.toString() + "\"") //
+						.map(c -> "MEAN(" + quoteIdentifier(c) + ") AS " + quoteIdentifier(c)) //
 						.collect(Collectors.joining(", "))) //
 				.append(" FROM ") //
 				.append(measurement) //
@@ -278,8 +278,8 @@ public class InfluxQlProxy extends QueryProxy {
 		// Prepare query string
 		var b = new StringBuilder("SELECT ") //
 				.append(channels.stream() //
-						.map(c -> "LAST(\"" + c.toString() + "\") - FIRST(\"" + c.toString() + "\") AS \""
-								+ c.toString() + "\"") //
+						.map(c -> "LAST(" + quoteIdentifier(c) + ") - FIRST(" + quoteIdentifier(c) + ") AS "
+								+ quoteIdentifier(c)) //
 						.collect(Collectors.joining(", "))) //
 				.append(" FROM ") //
 				.append(measurement) //
@@ -310,7 +310,7 @@ public class InfluxQlProxy extends QueryProxy {
 		// Prepare query string
 		var b = new StringBuilder("SELECT ") //
 				.append(channels.stream() //
-						.map(c -> "LAST(\"" + c.toString() + "\") AS \"LAST(" + c.toString() + ")\"") //
+						.map(c -> "LAST(" + quoteIdentifier(c) + ") AS " + quoteIdentifier("LAST(" + c.toString() + ")")) //
 						.collect(Collectors.joining(", "))) //
 				.append(" FROM ") //
 				.append(measurement) //
@@ -341,7 +341,7 @@ public class InfluxQlProxy extends QueryProxy {
 		// Prepare query string
 		var b = new StringBuilder("SELECT ") //
 				.append(channels.stream() //
-						.map(c -> "NON_NEGATIVE_DIFFERENCE(LAST(\"" + c.toString() + "\")) AS \"" + c.toString() + "\"") //
+						.map(c -> "NON_NEGATIVE_DIFFERENCE(LAST(" + quoteIdentifier(c) + ")) AS " + quoteIdentifier(c)) //
 						.collect(Collectors.joining(", "))) //
 				.append(" FROM ") //
 				.append(measurement) //
@@ -382,7 +382,7 @@ public class InfluxQlProxy extends QueryProxy {
 		// Prepare query string
 		var b = new StringBuilder("SELECT ") //
 				.append(channels.stream() //
-						.map(c -> "LAST(\"" + c.toString() + "\") AS \"" + c.toString() + "\"") //
+						.map(c -> "LAST(" + quoteIdentifier(c) + ") AS " + quoteIdentifier(c)) //
 						.collect(Collectors.joining(", "))) //
 				.append(" FROM ") //
 				.append(measurement) //
@@ -419,7 +419,8 @@ public class InfluxQlProxy extends QueryProxy {
 			Set<ChannelAddress> channels //
 	) {
 		final var builder = new StringBuilder("SELECT ") //
-				.append(channels.stream().map(channel -> "LAST(\"" + channel + "\") as \"" + channel + "\"")
+				.append(channels.stream()
+						.map(channel -> "LAST(" + quoteIdentifier(channel) + ") as " + quoteIdentifier(channel))
 						.collect(Collectors.joining(", ")))
 				.append(" FROM ") //
 				.append(measurement) //
@@ -436,6 +437,21 @@ public class InfluxQlProxy extends QueryProxy {
 		});
 
 		return builder.toString();
+	}
+
+	/**
+	 * Quotes a value as InfluxQL identifier, escaping embedded double quotes and
+	 * backslashes.
+	 *
+	 * @param identifier the raw identifier
+	 * @return the double-quoted identifier
+	 */
+	protected static String quoteIdentifier(String identifier) {
+		return "\"" + identifier.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+	}
+
+	private static String quoteIdentifier(ChannelAddress channel) {
+		return quoteIdentifier(channel.toString());
 	}
 
 	private InfluxQLQueryResult executeQuery(InfluxConnection influxConnection, String bucket, String query)
