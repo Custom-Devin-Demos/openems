@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.eclipse.jetty.server.Server;
@@ -88,6 +89,28 @@ class OadrHandlerTest {
 		var response = postXml("/EiEvent", fixture("oadrPoll.xml", ven.venId(), null));
 		assertEquals("oadrResponse", OadrXml.payloadElement(OadrXml.parse(response.body())).getLocalName());
 		assertEquals("200", OadrXml.text(OadrXml.parse(response.body()), "responseCode"));
+	}
+
+	@Test
+	void pollWithoutVenIdReturnsResponse() throws Exception {
+		var response = postXml("/EiEvent", fixture("oadrPollWithoutVenId.xml", null, null));
+		assertEquals(200, response.statusCode());
+		assertEquals("oadrResponse", OadrXml.payloadElement(OadrXml.parse(response.body())).getLocalName());
+		assertEquals("200", OadrXml.text(OadrXml.parse(response.body()), "responseCode"));
+	}
+
+	@Test
+	void farEventKeepsSignalPayloadValueAndClearsCurrentValue() throws Exception {
+		var ven = registerVen();
+		var start = Instant.now().plus(Duration.ofHours(1));
+		createEvent("{\"signalType\":\"SIMPLE\",\"level\":2,\"start\":\"" + start
+				+ "\",\"durationMinutes\":30}");
+		var document = poll(ven.venId());
+		var values = document.getElementsByTagNameNS(OadrXml.EI, "value");
+		assertEquals(2, values.getLength());
+		assertEquals("2.0", values.item(0).getTextContent());
+		assertEquals("0.0", values.item(1).getTextContent());
+		assertEquals("far", OadrXml.text(document, "eventStatus"));
 	}
 
 	@Test

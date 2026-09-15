@@ -347,18 +347,16 @@ public final class OadrXml {
 			child(uid, XCAL, "xcal", "text", "0");
 			var payload = child(interval, EI, "ei", "signalPayload");
 			var payloadFloat = child(payload, EI, "ei", "payloadFloat");
-			child(payloadFloat, EI, "ei", "value",
-					Double.toString(event.getStatus(now) == EventStatus.ACTIVE && event.signalType() == SignalType.SIMPLE
-							? event.level() : event.signalType() == SignalType.PRICE ? event.price() : 0));
+			var eventValue = event.signalType() == SignalType.SIMPLE ? event.level() : event.price();
+			child(payloadFloat, EI, "ei", "value", Double.toString(eventValue));
 			child(signal, EI, "ei", "signalName",
 					event.signalType() == SignalType.SIMPLE ? "simple" : "ELECTRICITY_PRICE");
 			child(signal, EI, "ei", "signalType", event.signalType() == SignalType.SIMPLE ? "level" : "price");
 			child(signal, EI, "ei", "signalID", "0");
 			var current = child(signal, EI, "ei", "currentValue");
 			var currentFloat = child(current, EI, "ei", "payloadFloat");
-			child(currentFloat, EI, "ei", "value",
-					Double.toString(event.getStatus(now) == EventStatus.ACTIVE && event.signalType() == SignalType.SIMPLE
-							? event.level() : event.signalType() == SignalType.PRICE ? event.price() : 0));
+			var currentValue = event.getStatus(now) == EventStatus.ACTIVE ? eventValue : 0;
+			child(currentFloat, EI, "ei", "value", Double.toString(currentValue));
 			if (event.venId() != null) {
 				var target = child(eiEvent, EI, "ei", "eiTarget");
 				child(target, EI, "ei", "venID", event.venId());

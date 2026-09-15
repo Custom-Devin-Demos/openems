@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Objects;
 
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.io.Content;
@@ -16,6 +17,8 @@ import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -96,9 +99,12 @@ public class OadrHandler extends Handler.Abstract {
 		}
 	}
 
-	private String handleRegister(org.w3c.dom.Document document, String payload) throws Exception {
+	private String handleRegister(Document document, String payload) throws Exception {
 		var requestId = OadrXml.requestId(document);
 		var requestedVenId = OadrXml.venId(document);
+		if (requestedVenId != null && requestedVenId.isBlank()) {
+			requestedVenId = null;
+		}
 		return switch (payload) {
 		case "oadrQueryRegistration" -> OadrXml.oadrCreatedPartyRegistration(requestId,
 				requestedVenId == null ? null : this.registry.getVen(requestedVenId).orElse(null), this.vtnId,
@@ -117,9 +123,9 @@ public class OadrHandler extends Handler.Abstract {
 		};
 	}
 
-	private String handleEvent(org.w3c.dom.Document document, String payload) throws Exception {
+	private String handleEvent(Document document, String payload) throws Exception {
 		var requestId = OadrXml.requestId(document);
-		var venId = OadrXml.venId(document);
+		var venId = this.normalizedVenId(document);
 		return switch (payload) {
 		case "oadrPoll" -> {
 			this.registry.recordPoll(venId);
@@ -146,21 +152,21 @@ public class OadrHandler extends Handler.Abstract {
 		};
 	}
 
-	private String handleReport(org.w3c.dom.Document document, String payload) throws Exception {
+	private String handleReport(Document document, String payload) throws Exception {
 		var requestId = OadrXml.requestId(document);
-		var venId = OadrXml.venId(document);
+		var venId = this.normalizedVenId(document);
 		return switch (payload) {
 		case "oadrRegisterReport" -> OadrXml.oadrRegisteredReport(requestId, venId);
 		case "oadrUpdateReport" -> {
 			var reports = document.getElementsByTagNameNS(OadrXml.OADR, "oadrReport");
 			for (var i = 0; i < reports.getLength(); i++) {
-				var report = (org.w3c.dom.Element) reports.item(i);
+				var report = (Element) reports.item(i);
 				var reportRequestId = text(report, "reportRequestID");
 				var specifierId = text(report, "reportSpecifierID");
 				var values = new HashMap<String, Double>();
 				var payloads = report.getElementsByTagNameNS(OadrXml.OADR, "oadrReportPayload");
 				for (var j = 0; j < payloads.getLength(); j++) {
-					var payloadElement = (org.w3c.dom.Element) payloads.item(j);
+					var payloadElement = (Element) payloads.item(j);
 					var id = text(payloadElement, "rID");
 					var value = text(payloadElement, "value");
 					if (id != null && value != null) {
@@ -176,11 +182,11 @@ public class OadrHandler extends Handler.Abstract {
 		};
 	}
 
-	private String handleOpt(org.w3c.dom.Document document, String payload) throws Exception {
+	private String handleOpt(Document document, String payload) throws Exception {
 		if (!"oadrCreateOpt".equals(payload)) {
 			throw new OpenemsException("Unknown opt payload: " + payload);
 		}
-		var venId = OadrXml.venId(document);
+		var venId = this.normalizedVenId(document);
 		var opt = OptType.fromOadr(OadrXml.optType(document));
 		var eventId = OadrXml.eventId(document);
 		if (eventId != null) {
@@ -225,9 +231,14 @@ public class OadrHandler extends Handler.Abstract {
 		}
 	}
 
-	private static String text(org.w3c.dom.Element parent, String localName) {
+	private static String text(Element parent, String localName) {
 		var elements = parent.getElementsByTagNameNS("*", localName);
 		return elements.getLength() == 0 ? null : elements.item(0).getTextContent().trim();
+	}
+
+	private static String normalizedVenId(Document document) {
+		var venId = Objects.requireNonNullElse(OadrXml.venId(document), "");
+		return venId.isBlank() ? "" : venId;
 	}
 
 	private void sendXml(Response response, int status, String xml) throws IOException {

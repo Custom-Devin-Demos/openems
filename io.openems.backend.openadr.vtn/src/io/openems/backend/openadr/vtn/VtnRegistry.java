@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 
@@ -56,7 +57,7 @@ public final class VtnRegistry implements OpenAdrVtn {
 		var id = requestedVenId == null || requestedVenId.isBlank() ? "ven-"
 				+ UUID.randomUUID().toString().replace("-", "").substring(0, 8) : requestedVenId;
 		var ven = new Ven(id, "reg-" + UUID.randomUUID(), venName == null ? "" : venName, this.clock.instant(),
-				new java.util.concurrent.atomic.AtomicReference<>());
+				new AtomicReference<>());
 		this.vens.put(id, ven);
 		return ven;
 	}
@@ -68,7 +69,7 @@ public final class VtnRegistry implements OpenAdrVtn {
 	 * @return VEN if known
 	 */
 	public Optional<Ven> getVen(String venId) {
-		return Optional.ofNullable(this.vens.get(venId));
+		return venId == null ? Optional.empty() : Optional.ofNullable(this.vens.get(venId));
 	}
 
 	/**
@@ -87,6 +88,9 @@ public final class VtnRegistry implements OpenAdrVtn {
 	 * @param venId VEN ID
 	 */
 	public void recordPoll(String venId) {
+		if (venId == null) {
+			return;
+		}
 		var ven = this.vens.get(venId);
 		if (ven != null) {
 			ven.lastPoll().set(this.clock.instant());
@@ -101,14 +105,15 @@ public final class VtnRegistry implements OpenAdrVtn {
 	 * @return events
 	 */
 	public List<DrEvent> getEventsForVen(String venId, Instant now) {
+		var normalizedVenId = venId == null ? "" : venId;
 		var result = new ArrayList<DrEvent>();
 		for (var event : this.events.values()) {
-			if (event.venId() != null && !event.venId().equals(venId)) {
+			if (event.venId() != null && !event.venId().equals(normalizedVenId)) {
 				continue;
 			}
 			if (event.cancelled()) {
-				if (!event.cancelDeliveredTo().contains(venId)) {
-					event.cancelDeliveredTo().add(venId);
+				if (!event.cancelDeliveredTo().contains(normalizedVenId)) {
+					event.cancelDeliveredTo().add(normalizedVenId);
 					result.add(event);
 				}
 			} else if (switch (event.getStatus(now)) {

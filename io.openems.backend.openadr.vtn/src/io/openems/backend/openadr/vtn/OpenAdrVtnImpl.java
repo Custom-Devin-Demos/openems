@@ -1,5 +1,7 @@
 package io.openems.backend.openadr.vtn;
 
+import java.util.Collection;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.openems.backend.common.component.AbstractOpenemsBackendComponent;
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.exceptions.OpenemsException;
 
 @Designate(ocd = Config.class, factory = true)
@@ -66,18 +69,17 @@ public class OpenAdrVtnImpl extends AbstractOpenemsBackendComponent implements O
 	}
 
 	@Override
-	public java.util.Collection<Ven> getVens() {
+	public Collection<Ven> getVens() {
 		return this.registry.getVens();
 	}
 
 	@Override
-	public java.util.Collection<DrEvent> getEvents() {
+	public Collection<DrEvent> getEvents() {
 		return this.registry.getEvents();
 	}
 
 	@Override
-	public DrEvent createEvent(CreateEventRequest request)
-			throws io.openems.common.exceptions.OpenemsError.OpenemsNamedException {
+	public DrEvent createEvent(CreateEventRequest request) throws OpenemsNamedException {
 		return this.registry.createEvent(request);
 	}
 
@@ -87,7 +89,7 @@ public class OpenAdrVtnImpl extends AbstractOpenemsBackendComponent implements O
 	}
 
 	@Override
-	public java.util.Collection<VenReport> getReports() {
+	public Collection<VenReport> getReports() {
 		return this.registry.getReports();
 	}
 }
