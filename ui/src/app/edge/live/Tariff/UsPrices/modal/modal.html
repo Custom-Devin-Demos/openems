@@ -1,0 +1,41 @@
+@if (isInitialized && component) {
+  <oe-modal [title]="component.alias" [component]="component">
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER' | translate"
+      [value]="('EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER_' + provider | translate) + (providerDetail ? ' (' + providerDetail + ')' : '')">
+    </oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.SOURCE_UNIT' | translate"
+      [value]="sourceUnit">
+    </oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.CURRENT_PRICE' | translate"
+      [value]="formatPrice(summary.current)"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.NEXT_HOUR_PRICE' | translate"
+      [value]="formatPrice(summary.nextHour)"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.TODAY_MIN' | translate"
+      [value]="formatPrice(summary.todayMin)"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.TODAY_MAX' | translate"
+      [value]="formatPrice(summary.todayMax)"></oe-modal-line>
+    <oe-modal-horizontal-line></oe-modal-horizontal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.LAST_UPDATE' | translate"
+      [value]="lastSuccessfulUpdate"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.HTTP_STATUS_CODE' | translate"
+      [value]="httpStatusCode ?? '-'"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.CONSECUTIVE_FAILURES' | translate"
+      [value]="consecutiveFailures ?? '-'"></oe-modal-line>
+    <oe-modal-horizontal-line></oe-modal-horizontal-line>
+    @if (hasTouController) {
+      <oe-modal-info-line [info]="'EDGE.INDEX.WIDGETS.US_PRICES.FORECAST_TITLE' | translate"></oe-modal-info-line>
+      <ion-segment [value]="chartHours" (ionChange)="setChartHours($event.detail.value)">
+        <ion-segment-button [value]="24">
+          <ion-label>24 h</ion-label>
+        </ion-segment-button>
+        <ion-segment-button [value]="48">
+          <ion-label>48 h</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+      <oe-us-prices-forecast-chart class="ion-padding" [currency]="currency" [hourly]="visibleHourly">
+      </oe-us-prices-forecast-chart>
+    } @else {
+      <oe-modal-info-line [info]="'EDGE.INDEX.WIDGETS.US_PRICES.NO_FORECAST' | translate"></oe-modal-info-line>
+    }
+  </oe-modal>
+}
