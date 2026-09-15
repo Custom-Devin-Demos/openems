@@ -74,6 +74,8 @@ public class OperatingSystemDebianSystemd extends OperatingSystemLinux implement
 	private static final String DHCP_SECTION = "[DHCP]";
 	private static final String ADDRESS_SECTION = "[Address]";
 	private static final String EMPTY_SECTION = "";
+	private static final Pattern VALID_INTERFACE_NAME = Pattern.compile("^[A-Za-z0-9._*-]{1,15}$");
+	private static final Pattern VALID_ADDRESS_LABEL = Pattern.compile("^[A-Za-z0-9._*-]{1,15}$");
 
 	private static final Logger log = LoggerFactory.getLogger(OperatingSystemDebianSystemd.class);
 
@@ -128,6 +130,7 @@ public class OperatingSystemDebianSystemd extends OperatingSystemLinux implement
 		var newInterfacesToCreate = new ArrayList<NetworkInterface<?>>();
 
 		for (NetworkInterface<?> networkInterface : request.networkInterfaces()) {
+			assertValidNetworkInterface(networkInterface);
 			NetworkInterface<?> iface = oldNetworkConfiguration.getInterfaces().get(networkInterface.getName());
 
 			// If interface doesn't exist, mark it as a new interface to create
@@ -152,7 +155,7 @@ public class OperatingSystemDebianSystemd extends OperatingSystemLinux implement
 		// First create .network files for new interfaces
 		for (NetworkInterface<?> newInterface : newInterfacesToCreate) {
 			var fileName = newInterface.getName() + ".network";
-			var file = new File(NETWORK_BASE_PATH, fileName);
+			var file = resolveNetworkFile(fileName);
 			var lines = this.toFileFormat(user, newInterface);
 			try {
 				// Ensure the directory exists
@@ -201,7 +204,7 @@ public class OperatingSystemDebianSystemd extends OperatingSystemLinux implement
 			if (file == null) {
 				// Create file if it doesn't exist (fallback for old interfaces)
 				var fileName = iface.getName() + ".network";
-				file = new File(NETWORK_BASE_PATH, fileName);
+				file = resolveNetworkFile(fileName);
 				log.warn("Network interface file not found for " + iface.getName() + ", creating new file");
 			}
 
@@ -222,6 +225,46 @@ public class OperatingSystemDebianSystemd extends OperatingSystemLinux implement
 		// apply the configuration by restarting the systemd-networkd service
 		this.handleExecuteSystemCommandRequest(ExecuteSystemCommandRequest
 				.runInBackgroundWithoutAuthentication("systemctl restart systemd-networkd --no-block"));
+	}
+
+	/**
+	 * Validates that the interface name and address labels only contain
+	 * characters that are safe to use in a file name and as a single
+	 * systemd-networkd configuration value.
+	 *
+	 * @param iface the {@link NetworkInterface} to validate
+	 * @throws OpenemsNamedException if the name or a label is invalid
+	 */
+	protected static void assertValidNetworkInterface(NetworkInterface<?> iface) throws OpenemsNamedException {
+		final var name = iface.getName();
+		if (name == null || !VALID_INTERFACE_NAME.matcher(name).matches() || name.equals(".") || name.equals("..")) {
+			throw new OpenemsException("Invalid network interface name [" + name + "]");
+		}
+		if (iface.getAddresses().isSetAndNotNull()) {
+			for (var address : iface.getAddresses().getValue()) {
+				final var label = address.getLabel();
+				if (label != null && !label.isBlank() && !VALID_ADDRESS_LABEL.matcher(label).matches()) {
+					throw new OpenemsException("Invalid address label [" + label + "] for interface [" + name + "]");
+				}
+			}
+		}
+	}
+
+	/**
+	 * Resolves a configuration file name inside {@link #NETWORK_BASE_PATH} and
+	 * verifies that the resulting path does not escape the base directory.
+	 *
+	 * @param fileName the file name
+	 * @return the resolved {@link File}
+	 * @throws OpenemsNamedException if the path is outside the base directory
+	 */
+	protected static File resolveNetworkFile(String fileName) throws OpenemsNamedException {
+		final var basePath = Paths.get(NETWORK_BASE_PATH).toAbsolutePath().normalize();
+		final var target = basePath.resolve(fileName).normalize();
+		if (!basePath.equals(target.getParent())) {
+			throw new OpenemsException("Invalid network configuration file name [" + fileName + "]");
+		}
+		return target.toFile();
 	}
 
 	/**
