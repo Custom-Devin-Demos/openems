@@ -1,0 +1,268 @@
+{
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://api.pjm.com/api/v1/da_hrl_lmps?RowCount=50&Order=Asc&StartRow=1&IsActiveMetadata=True&Fields=datetime_beginning_utc%2Cdatetime_beginning_ept%2Cpnode_id%2Cpnode_name%2Ctype%2Csystem_energy_price_da%2Ctotal_lmp_da%2Ccongestion_price_da%2Cmarginal_loss_price_da&pnode_id=33092371&datetime_beginning_ept=3%2F9%2F2025%2000%3A00%20to%203%2F9%2F2025%2023%3A59"
+    },
+    {
+      "rel": "metadata",
+      "href": "https://api.pjm.com/api/v1/da_hrl_lmps/metadata"
+    }
+  ],
+  "items": [
+    {
+      "datetime_beginning_utc": "2025-03-09T05:00:00",
+      "datetime_beginning_ept": "2025-03-09T00:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 38.88,
+      "total_lmp_da": 32.819275,
+      "congestion_price_da": -3.410902,
+      "marginal_loss_price_da": -2.649823
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T06:00:00",
+      "datetime_beginning_ept": "2025-03-09T01:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 37.65,
+      "total_lmp_da": 31.860055,
+      "congestion_price_da": -3.159583,
+      "marginal_loss_price_da": -2.630362
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T07:00:00",
+      "datetime_beginning_ept": "2025-03-09T03:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 39.25,
+      "total_lmp_da": 33.687492,
+      "congestion_price_da": -3.009412,
+      "marginal_loss_price_da": -2.553096
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T08:00:00",
+      "datetime_beginning_ept": "2025-03-09T04:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 41.98,
+      "total_lmp_da": 33.039091,
+      "congestion_price_da": -6.314562,
+      "marginal_loss_price_da": -2.626347
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T09:00:00",
+      "datetime_beginning_ept": "2025-03-09T05:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 44.83,
+      "total_lmp_da": 33.128626,
+      "congestion_price_da": -9.029566,
+      "marginal_loss_price_da": -2.671808
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T10:00:00",
+      "datetime_beginning_ept": "2025-03-09T06:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 55.82,
+      "total_lmp_da": 43.954282,
+      "congestion_price_da": -8.427261,
+      "marginal_loss_price_da": -3.438457
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T11:00:00",
+      "datetime_beginning_ept": "2025-03-09T07:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 63.14,
+      "total_lmp_da": 48.831562,
+      "congestion_price_da": -11.046509,
+      "marginal_loss_price_da": -3.261929
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T12:00:00",
+      "datetime_beginning_ept": "2025-03-09T08:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 49.22,
+      "total_lmp_da": 43.350847,
+      "congestion_price_da": -3.499211,
+      "marginal_loss_price_da": -2.369942
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T13:00:00",
+      "datetime_beginning_ept": "2025-03-09T09:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 36.98,
+      "total_lmp_da": 31.252734,
+      "congestion_price_da": -3.651209,
+      "marginal_loss_price_da": -2.076057
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T14:00:00",
+      "datetime_beginning_ept": "2025-03-09T10:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 34.57,
+      "total_lmp_da": 29.334568,
+      "congestion_price_da": -3.146024,
+      "marginal_loss_price_da": -2.089408
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T15:00:00",
+      "datetime_beginning_ept": "2025-03-09T11:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 30.57,
+      "total_lmp_da": 25.093417,
+      "congestion_price_da": -3.399647,
+      "marginal_loss_price_da": -2.076936
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T16:00:00",
+      "datetime_beginning_ept": "2025-03-09T12:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 27.86,
+      "total_lmp_da": 23.228095,
+      "congestion_price_da": -2.521745,
+      "marginal_loss_price_da": -2.11016
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T17:00:00",
+      "datetime_beginning_ept": "2025-03-09T13:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 26.04,
+      "total_lmp_da": 21.050715,
+      "congestion_price_da": -2.919017,
+      "marginal_loss_price_da": -2.070268
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T18:00:00",
+      "datetime_beginning_ept": "2025-03-09T14:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 25.33,
+      "total_lmp_da": 19.109481,
+      "congestion_price_da": -4.11962,
+      "marginal_loss_price_da": -2.100899
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T19:00:00",
+      "datetime_beginning_ept": "2025-03-09T15:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 24.83,
+      "total_lmp_da": 17.578985,
+      "congestion_price_da": -5.039144,
+      "marginal_loss_price_da": -2.211871
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T20:00:00",
+      "datetime_beginning_ept": "2025-03-09T16:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 25.2,
+      "total_lmp_da": 18.006923,
+      "congestion_price_da": -5.015911,
+      "marginal_loss_price_da": -2.177166
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T21:00:00",
+      "datetime_beginning_ept": "2025-03-09T17:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 27.57,
+      "total_lmp_da": 20.888452,
+      "congestion_price_da": -4.348027,
+      "marginal_loss_price_da": -2.333521
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T22:00:00",
+      "datetime_beginning_ept": "2025-03-09T18:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 36.39,
+      "total_lmp_da": 29.099048,
+      "congestion_price_da": -4.69846,
+      "marginal_loss_price_da": -2.592492
+    },
+    {
+      "datetime_beginning_utc": "2025-03-09T23:00:00",
+      "datetime_beginning_ept": "2025-03-09T19:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 61.29,
+      "total_lmp_da": 51.42658,
+      "congestion_price_da": -5.43265,
+      "marginal_loss_price_da": -4.43077
+    },
+    {
+      "datetime_beginning_utc": "2025-03-10T00:00:00",
+      "datetime_beginning_ept": "2025-03-09T20:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 55.25,
+      "total_lmp_da": 46.097714,
+      "congestion_price_da": -4.959244,
+      "marginal_loss_price_da": -4.193042
+    },
+    {
+      "datetime_beginning_utc": "2025-03-10T01:00:00",
+      "datetime_beginning_ept": "2025-03-09T21:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 41.9,
+      "total_lmp_da": 34.948812,
+      "congestion_price_da": -3.424879,
+      "marginal_loss_price_da": -3.526309
+    },
+    {
+      "datetime_beginning_utc": "2025-03-10T02:00:00",
+      "datetime_beginning_ept": "2025-03-09T22:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 37.64,
+      "total_lmp_da": 30.69039,
+      "congestion_price_da": -3.680448,
+      "marginal_loss_price_da": -3.269162
+    },
+    {
+      "datetime_beginning_utc": "2025-03-10T03:00:00",
+      "datetime_beginning_ept": "2025-03-09T23:00:00",
+      "pnode_id": 33092371,
+      "pnode_name": "COMED",
+      "type": "ZONE",
+      "system_energy_price_da": 34.42,
+      "total_lmp_da": 27.019541,
+      "congestion_price_da": -4.353746,
+      "marginal_loss_price_da": -3.046713
+    }
+  ],
+  "totalRows": 23
+}
