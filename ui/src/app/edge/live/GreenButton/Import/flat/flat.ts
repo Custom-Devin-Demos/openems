@@ -1,6 +1,7 @@
 // @ts-strict-ignore
 import { ChangeDetectionStrategy, Component } from "@angular/core";
 import { AbstractFlatWidget } from "src/app/shared/components/flat/abstract-flat-widget";
+import { Modal } from "src/app/shared/components/flat/flat";
 import { ChannelAddress, CurrentData } from "src/app/shared/shared";
 import { ModalComponent } from "../modal/modal";
 import { GreenButtonUtils } from "../shared/shared";
@@ -13,10 +14,19 @@ import { GreenButtonUtils } from "../shared/shared";
 })
 export class FlatComponent extends AbstractFlatWidget {
 
-    protected readonly modalComponent = ModalComponent;
+    protected modalComponent: Modal | null = null;
     protected readonly GreenButtonUtils = GreenButtonUtils;
     protected values: GreenButtonUtils.Values = GreenButtonUtils.EMPTY_VALUES;
     protected convertImportState = GreenButtonUtils.importStateConverter(this.translate);
+
+    protected override afterIsInitialized(): void {
+        this.modalComponent = {
+            component: ModalComponent,
+            componentProps: {
+                component: this.component,
+            },
+        };
+    }
 
     protected override getChannelAddresses(): ChannelAddress[] {
         return this.component == null ? [] : GreenButtonUtils.getChannelAddresses(this.component.id);

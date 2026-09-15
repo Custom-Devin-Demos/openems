@@ -1,6 +1,7 @@
 // @ts-strict-ignore
 import { ChangeDetectionStrategy, Component, OnDestroy } from "@angular/core";
 import { AbstractFlatWidget } from "src/app/shared/components/flat/abstract-flat-widget";
+import { Modal } from "src/app/shared/components/flat/flat";
 import { ChannelAddress, CurrentData, EdgeConfig } from "src/app/shared/shared";
 import { ModalComponent } from "../modal/modal";
 import { OpenAdrUtils } from "../shared/shared";
@@ -13,7 +14,7 @@ import { OpenAdrUtils } from "../shared/shared";
 })
 export class FlatComponent extends AbstractFlatWidget implements OnDestroy {
 
-    protected readonly modalComponent = ModalComponent;
+    protected modalComponent: Modal | null = null;
     protected readonly OpenAdrUtils = OpenAdrUtils;
     protected values: OpenAdrUtils.Values = OpenAdrUtils.EMPTY_VALUES;
     protected currency: string | null = null;
@@ -33,6 +34,12 @@ export class FlatComponent extends AbstractFlatWidget implements OnDestroy {
     }
 
     protected override afterIsInitialized(): void {
+        this.modalComponent = {
+            component: ModalComponent,
+            componentProps: {
+                component: this.component,
+            },
+        };
         const meta: EdgeConfig.Component = this.config?.getComponent("_meta");
         this.currency = this.config?.getPropertyFromComponent<string>(meta, "currency") ?? null;
         this.countdownTimer = setInterval(() => this.updateCountdown(), 1000);

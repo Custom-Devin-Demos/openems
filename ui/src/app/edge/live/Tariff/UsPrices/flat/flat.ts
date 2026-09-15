@@ -1,6 +1,7 @@
 // @ts-strict-ignore
 import { ChangeDetectionStrategy, Component } from "@angular/core";
 import { AbstractFlatWidget } from "src/app/shared/components/flat/abstract-flat-widget";
+import { Modal } from "src/app/shared/components/flat/flat";
 import { ComponentJsonApiRequest } from "src/app/shared/jsonrpc/request/componentJsonApiRequest";
 import { GetScheduleRequest } from "src/app/shared/jsonrpc/request/getScheduleRequest";
 import { GetScheduleResponse } from "src/app/shared/jsonrpc/response/getScheduleResponse";
@@ -16,7 +17,7 @@ import { UsPricesUtils } from "../shared/shared";
 })
 export class FlatComponent extends AbstractFlatWidget {
 
-    protected readonly modalComponent = ModalComponent;
+    protected modalComponent: Modal | null = null;
     protected provider: UsPricesUtils.Provider | null = null;
     protected providerDetail: string | null = null;
     protected summary: UsPricesUtils.Summary = { current: null, nextHour: null, todayMin: null, todayMax: null };
@@ -34,6 +35,12 @@ export class FlatComponent extends AbstractFlatWidget {
     }
 
     protected override afterIsInitialized(): void {
+        this.modalComponent = {
+            component: ModalComponent,
+            componentProps: {
+                component: this.component,
+            },
+        };
         const meta: EdgeConfig.Component = this.config?.getComponent("_meta");
         const currency = this.config?.getPropertyFromComponent<string>(meta, "currency") ?? null;
         this.formatPrice = UsPricesUtils.priceFormatter(currency);
