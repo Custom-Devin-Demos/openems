@@ -89,6 +89,7 @@ include::pages/backend/service.d/_nav.adoc[]
 ** xref:us-grid/greenbutton.adoc[Green Button Import]
 ** xref:us-grid/openadr.adoc[OpenADR Demand Response]
 ** xref:us-grid/simulator-walkthrough.adoc[Simulator Walkthrough]
+** xref:us-grid/e2e.adoc[End-to-End Scenario]
 ** xref:us-grid/release-notes.adoc[Release Notes]
 * Simulation
 ** xref:simulation/gitpod.adoc[Live-Demo on Gitpod]

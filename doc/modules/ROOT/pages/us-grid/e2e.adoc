@@ -1,0 +1,138 @@
+= End-to-End Scenario
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+This page complements the xref:us-grid/simulator-walkthrough.adoc[Simulator Walkthrough] with
+
+. a ready-to-import Apache Felix configuration set that brings up the complete US grid demonstration in one step, and
+. the automated JUnit integration test `UsGridEndToEndTest` that exercises the same chain (ComEd prices → Time-of-Use schedule → OpenADR event → ESS/EVCS curtailment → restoration) without any network access.
+
+== Application wiring
+
+The bundles of the US grid integration are part of both applications:
+
+[cols="1,2", options="header"]
+|===
+|Application |`-runrequires` entries
+
+|`io.openems.edge.application/EdgeApp.bndrun`
+|`io.openems.edge.controller.api.openadr`, `io.openems.edge.greenbutton`, `io.openems.edge.timeofusetariff.comed`, `io.openems.edge.timeofusetariff.pjm`
+
+|`io.openems.backend.application/BackendApp.bndrun`
+|`io.openems.backend.openadr.vtn`
+|===
+
+The `-runbundles` sections are generated with `./gradlew resolve`; CI fails if they are out of date.
+
+== Ready-to-import configuration set
+
+The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Felix FileInstall configuration files (`<factoryPid>~<name>.config`):
+
+[cols="1,1,3", options="header"]
+|===
+|Directory |File |Purpose
+
+.13+|`edge/`
+|`Core.Meta.config` |Currency `USD`, timezone `America/Chicago`, ESS charging from grid allowed
+|`Scheduler.AllAlphabetically~scheduler0.config` |Scheduler
+|`Controller.Api.Websocket~ctrlApiWebsocket0.config` |Websocket API for OpenEMS UI on port 8085
+|`Simulator.Datasource.CSV.Predefined~datasource0.config` |Household load profile
+|`Simulator.Datasource.CSV.Predefined~datasource1.config` |PV production profile
+|`Simulator.GridMeter.Acting~meter0.config` |Grid meter driven by `datasource0`
+|`Simulator.ProductionMeter.Acting~meter1.config` |PV meter driven by `datasource1`
+|`Simulator.EssSymmetric.Reacting~ess0.config` |10 kW / 10 kWh battery, 50 % SoC
+|`Simulator.Evcs~evcs0.config` |11 kW charging station
+|`TimeOfUseTariff.ComEd~timeOfUseTariff0.config` |ComEd day-ahead prices plus 45 USD/MWh ancillary costs
+|`Controller.Ess.Time-Of-Use-Tariff~ctrlEssTimeOfUseTariff0.config` |`CHARGE_CONSUMPTION`, max. 5 kW from grid
+|`Controller.Evcs~ctrlEvcs0.config` |`FORCE_CHARGE` for `evcs0`
+|`Controller.Api.OpenADR~ctrlOpenAdr0.config` |VEN against `http://localhost:8082`, curtails `ess0` (discharge blocked) and `evcs0` (1400 W)
+
+|`backend/`
+|`Openadr.Vtn~vtn0.config` |VTN simulator on port 8082, no TLS
+|===
+
+=== Run it
+
+. Build both applications once:
++
+[source,bash]
+----
+./gradlew buildEdge buildBackend
+----
+
+. Start the Backend with the VTN configuration:
++
+[source,bash]
+----
+mkdir -p /tmp/openems-backend/load
+cp io.openems.edge.simulator/scenarios/us-grid/backend/*.config /tmp/openems-backend/load/
+java -Dfelix.cm.dir=/tmp/openems-backend/config \
+     -Dfelix.fileinstall.dir=/tmp/openems-backend/load \
+     -jar build/openems-backend.jar
+----
+
+. Start the Edge with the simulator configuration:
++
+[source,bash]
+----
+mkdir -p /tmp/openems-edge/load
+cp io.openems.edge.simulator/scenarios/us-grid/edge/*.config /tmp/openems-edge/load/
+java -Dfelix.cm.dir=/tmp/openems-edge/config \
+     -Dfelix.fileinstall.dir=/tmp/openems-edge/load \
+     -jar build/openems-edge.jar
+----
++
+Alternatively start `EdgeApp.bndrun`/`BackendApp.bndrun` from the IDE and drop the files into the `load` directory of the working directory, or enter the values from the files manually in the Apache Felix Web Console (http://localhost:8080/system/console/configMgr resp. http://localhost:8079/system/console/configMgr).
+
+. Wait for `ctrlOpenAdr0/RegistrationState = REGISTERED` (about 10 s) and check the VTN:
++
+[source,bash]
+----
+curl http://localhost:8082/OpenADR2/Simple/2.0b/admin/vens
+----
+
+. Fire a 30-minute `SIMPLE` level-2 event starting now:
++
+[source,bash]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"durationMinutes":30}'
+----
+
+. Observe in OpenEMS UI (`cd ui && npm ci && npm start`, http://localhost:4200, connect to the Edge on `ws://localhost:8085`):
+* the _OpenADR_ live widget shows the active event, `CurtailmentActive = true`, opt-in state and remaining time,
+* `ess0/ActivePower` stops discharging (`SetActivePowerLessOrEquals = 0`) and `evcs0/SetChargePowerLimit = 1400`,
+* the _Time-of-Use Tariff_ widget shows the ComEd prices in ¢/kWh together with the schedule.
++
+After the event ends (or after `curl -X DELETE http://localhost:8082/OpenADR2/Simple/2.0b/admin/events/<eventId>`) the VEN releases the constraints at its next poll.
+
+NOTE: `TimeOfUseTariff.ComEd` polls `hourlypricing.comed.com`. Without internet access the tariff channels report `ConsecutiveFailures > 0`; the OpenADR part of the scenario works nevertheless.
+
+== Automated integration test
+
+`io.openems.edge.controller.api.openadr/test/io/openems/edge/controller/api/openadr/UsGridEndToEndTest.java` runs the whole chain deterministically with `TimeLeapClock`:
+
+[cols="1,3", options="header"]
+|===
+|Test |Steps
+
+|`testComEdPricesScheduleChargeGridInCheapHours`
+|Parses the recorded ComEd day-ahead fixture `fixtures/comed_dayahead_2026-09-15.txt` with `ComEdApi.parseDayAhead`/`ComEdApi.combine` (24 hourly prices → 96 quarters in USD/MWh), feeds them through `DummyTimeOfUseTariffProvider` into the `io.openems.edge.energy` `Simulator` with the `Controller.Ess.Time-Of-Use-Tariff` `EnergyScheduler` (`CHARGE_CONSUMPTION`) and asserts that a schedule with `CHARGE_GRID` in the cheap night hours costs less than one charging in the evening peak.
+
+|`testVtnSimpleEventCurtailsEssAndEvcsAndRestores`
+|Starts a local fake VTN (`com.sun.net.httpserver.HttpServer`), activates `Controller.Api.OpenADR` with `DummyManagedSymmetricEss` and `DummyManagedEvcs`, publishes a `SIMPLE` level-2 event for the current hour via `oadrDistributeEvent`, waits for registration and `oadrCreatedEvent`, then asserts `ess0/SetActivePowerLessOrEquals = 500`, `SetActivePowerGreaterOrEquals = 0` and `evcs0/SetChargePowerLimit = 1400` during the event and that the constraints are released after the clock leaps past the event end.
+|===
+
+Run it with
+
+[source,bash]
+----
+./gradlew :io.openems.edge.controller.api.openadr:test --tests '*UsGridEndToEndTest*'
+----

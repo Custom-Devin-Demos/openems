@@ -1,0 +1,8 @@
+= US grid end-to-end scenario (Apache Felix configuration set)
+
+Ready-to-import Apache Felix FileInstall configurations for the US grid demonstration described in `doc/modules/ROOT/pages/us-grid/e2e.adoc`.
+
+* `edge/` — OpenEMS Edge: simulator meters/ESS/EVCS, `TimeOfUseTariff.ComEd`, `Controller.Ess.Time-Of-Use-Tariff`, `Controller.Evcs`, `Controller.Api.OpenADR`, `Core.Meta` (currency USD).
+* `backend/` — OpenEMS Backend: `Openadr.Vtn` simulator on port 8082.
+
+Copy the files into the FileInstall watch directory of the respective application (`-Dfelix.fileinstall.dir=<dir>`, default `./load` relative to the working directory) before or while the application runs. File names follow the FileInstall convention `<factoryPid>~<name>.config`.
