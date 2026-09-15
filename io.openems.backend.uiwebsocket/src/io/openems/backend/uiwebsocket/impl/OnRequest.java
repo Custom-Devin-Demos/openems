@@ -515,10 +515,12 @@ public class OnRequest implements io.openems.common.websocket.OnRequest {
 	 * @throws OpenemsNamedException on error
 	 */
 	private CompletableFuture<GenericJsonrpcResponseSuccess> handleSubmitSetupProtocolRequest(User user,
-			SubmitSetupProtocolRequest request) {
+			SubmitSetupProtocolRequest request) throws OpenemsNamedException {
+		final var edgeId = JsonUtils.getAsString(JsonUtils.getAsJsonObject(request.getJsonObject(), "edge"), "id");
+		this.parent.metadata.assertRoleIsAtLeast(user, edgeId, Role.INSTALLER, SubmitSetupProtocolRequest.METHOD);
 
 		// TODO add oem
-		final var customer = request.getJsonObject().get("customer").getAsJsonObject();
+		final var customer = JsonUtils.getAsJsonObject(request.getJsonObject(), "customer");
 		final var password = PasswordUtils.generateRandomPassword(8);
 		customer.addProperty("role", Role.OWNER.name());
 		customer.addProperty("password", password);
