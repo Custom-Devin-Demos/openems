@@ -12,6 +12,7 @@ public enum Currency implements OptionsEnum {
 	EUR(0), //
 	SEK(1), //
 	CHF(2), //
+	USD(3), //
 	;
 
 	private final int value;
@@ -51,6 +52,7 @@ public enum Currency implements OptionsEnum {
 		case EUR -> Currency.EUR;
 		case SEK -> Currency.SEK;
 		case CHF -> Currency.CHF;
+		case USD -> Currency.USD;
 		};
 	}
 
