@@ -18,6 +18,7 @@ export class ModalComponent extends AbstractModal {
     protected provider: UsPricesUtils.Provider | null = null;
     protected providerDetail: string | null = null;
     protected currency: string | null = null;
+    protected sourceUnit: string = "-";
     protected hourly: UsPricesUtils.HourlyPrice[] = [];
     protected summary: UsPricesUtils.Summary = { current: null, nextHour: null, todayMin: null, todayMax: null };
     protected lastSuccessfulUpdate: string = "-";
@@ -44,6 +45,7 @@ export class ModalComponent extends AbstractModal {
         const meta: EdgeConfig.Component = this.config?.getComponent("_meta");
         this.currency = this.config?.getPropertyFromComponent<string>(meta, "currency") ?? null;
         this.formatPrice = UsPricesUtils.priceFormatter(this.currency);
+        this.sourceUnit = UsPricesUtils.getSourceUnit(this.currency);
         this.loadForecast();
     }
 

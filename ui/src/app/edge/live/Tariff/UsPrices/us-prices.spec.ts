@@ -47,6 +47,13 @@ describe("Tariff/UsPrices", () => {
             expect(format(0)).toBe("0 ¢/kWh");
             expect(format(null)).toBe("-");
         });
+
+        it("uses $ as USD currency symbol for the source unit", () => {
+            expect(Currency.getCurrencySymbol("USD")).toBe("$");
+            expect(UsPricesUtils.getSourceUnit("USD")).toBe("$/MWh");
+            expect(UsPricesUtils.getSourceUnit("EUR")).toBe("€/MWh");
+            expect(UsPricesUtils.getSourceUnit("SEK")).toBe("kr/MWh");
+        });
     });
 
     describe("UsPricesUtils", () => {

@@ -644,6 +644,7 @@
                     "PROVIDER": "Anbieter",
                     "PROVIDER_COMED": "ComEd",
                     "PROVIDER_PJM": "PJM",
+                    "SOURCE_UNIT": "Einheit der Quellpreise",
                     "TODAY_MAX": "Heutiges Maximum",
                     "TODAY_MIN": "Heutiges Minimum"
                 }

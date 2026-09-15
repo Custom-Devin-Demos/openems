@@ -162,6 +162,16 @@ export namespace UsPricesUtils {
     }
 
     /**
+     * Gets the unit of the raw provider prices, e.g. "$/MWh".
+     *
+     * @param currency the currency code
+     * @returns the unit label
+     */
+    export function getSourceUnit(currency: string | null): string {
+        return Currency.getCurrencySymbol(currency) + "/MWh";
+    }
+
+    /**
      * Formats an epoch-seconds timestamp as a locale date/time string.
      *
      * @param epochSeconds the epoch seconds

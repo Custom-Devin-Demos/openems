@@ -3,6 +3,9 @@
     <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER' | translate"
       [value]="('EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER_' + provider | translate) + (providerDetail ? ' (' + providerDetail + ')' : '')">
     </oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.SOURCE_UNIT' | translate"
+      [value]="sourceUnit">
+    </oe-modal-line>
     <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.CURRENT_PRICE' | translate"
       [value]="formatPrice(summary.current)"></oe-modal-line>
     <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.NEXT_HOUR_PRICE' | translate"

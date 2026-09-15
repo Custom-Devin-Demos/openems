@@ -653,6 +653,7 @@
                     "PROVIDER": "Provider",
                     "PROVIDER_COMED": "ComEd",
                     "PROVIDER_PJM": "PJM",
+                    "SOURCE_UNIT": "Source price unit",
                     "TODAY_MAX": "Today's maximum",
                     "TODAY_MIN": "Today's minimum"
                 }
