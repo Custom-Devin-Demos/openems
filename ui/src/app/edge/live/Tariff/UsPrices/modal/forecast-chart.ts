@@ -39,6 +39,7 @@ export class ForecastChartComponent {
             animation: false,
             plugins: {
                 legend: { display: false },
+                datalabels: { display: false },
             },
             scales: {
                 x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },

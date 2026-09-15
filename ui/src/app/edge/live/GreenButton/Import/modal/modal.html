@@ -15,10 +15,12 @@
       <oe-modal-info-line [info]="values.lastError"></oe-modal-info-line>
     }
     <oe-modal-horizontal-line></oe-modal-horizontal-line>
-    <ion-item lines="none" button [disabled]="!hasImportedRange" (click)="openConsumptionHistory()"
-      class="green-button-history-link">
-      <ion-icon slot="start" name="stats-chart-outline"></ion-icon>
-      <ion-label>{{ 'EDGE.INDEX.WIDGETS.GREEN_BUTTON.OPEN_CONSUMPTION_HISTORY' | translate }}</ion-label>
+    <ion-item lines="none">
+      <ion-button expand="block" fill="outline" class="green-button-history-link" style="width: 100%"
+        [disabled]="!hasImportedRange" (click)="openConsumptionHistory()">
+        <ion-icon slot="start" name="stats-chart-outline"></ion-icon>
+        {{ 'EDGE.INDEX.WIDGETS.GREEN_BUTTON.OPEN_CONSUMPTION_HISTORY' | translate }}
+      </ion-button>
     </ion-item>
   </oe-modal>
 }
