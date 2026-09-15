@@ -1,6 +1,7 @@
 package io.openems.shared.influxdb.proxy;
 
 import static io.openems.shared.influxdb.proxy.InfluxQlProxy.parseToJsonElement;
+import static io.openems.shared.influxdb.proxy.InfluxQlProxy.quoteIdentifier;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
@@ -42,5 +43,12 @@ public class InfluxQlProxyTest {
 		assertEquals("foo-bar", parseToJsonElement("foo-bar").getAsString());
 		assertEquals(JsonNull.INSTANCE, parseToJsonElement(null));
 		assertEquals(JsonNull.INSTANCE, parseToJsonElement(""));
+	}
+
+	@Test
+	public void testQuoteIdentifier() {
+		assertEquals("\"_sum/EssSoc\"", quoteIdentifier("_sum/EssSoc"));
+		assertEquals("\"a/b\\\") AS \\\"x\"", quoteIdentifier("a/b\") AS \"x"));
+		assertEquals("\"a\\\\b\"", quoteIdentifier("a\\b"));
 	}
 }

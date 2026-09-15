@@ -3,6 +3,8 @@ package io.openems.common.types;
 import org.junit.Assert;
 import org.junit.Test;
 
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+
 public class ChannelAddressTest {
 
 	@Test
@@ -26,6 +28,29 @@ public class ChannelAddressTest {
 				ChannelAddress.match(meter1ActivePower, anyMeterActivePower));
 		Assert.assertEquals("*".length() + "*Power".length(), ChannelAddress.match(meter1ActivePower, anyPower));
 		Assert.assertEquals("*".length() + "*Power".length(), ChannelAddress.match(meter1ReactivePower, anyPower));
+	}
+
+	@Test
+	public void testFromString() throws Exception {
+		var address = ChannelAddress.fromString("_sum/EssSoc");
+		Assert.assertEquals("_sum", address.getComponentId());
+		Assert.assertEquals("EssSoc", address.getChannelId());
+		Assert.assertEquals("meter*", ChannelAddress.fromString("meter*/Active-Power.L1").getComponentId());
+	}
+
+	@Test
+	public void testFromStringRejectsInvalidCharacters() {
+		for (var invalid : new String[] { //
+				"ess0", //
+				"ess0/", //
+				"/ActivePower", //
+				"ess0/ActivePower/extra", //
+				"ess0/ActivePower\") AS \"x\" FROM data WHERE 1=1 --", //
+				"ess0/Active Power", //
+				"ess0;/ActivePower", //
+		}) {
+			Assert.assertThrows(invalid, OpenemsNamedException.class, () -> ChannelAddress.fromString(invalid));
+		}
 	}
 
 }
