@@ -12,6 +12,7 @@ import com.google.gson.JsonElement;
 
 import io.openems.common.channel.Unit;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.timedata.CommonTimedataService;
 import io.openems.common.types.ChannelAddress;
 import io.openems.edge.common.channel.Doc;
@@ -89,5 +90,22 @@ public interface Timedata extends CommonTimedataService, OpenemsComponent {
 			final ZonedDateTime toDate, //
 			final Set<ChannelAddress> channels //
 	) throws OpenemsNamedException;
+
+	/**
+	 * Writes historic values for the given {@link ChannelAddress}, e.g. to import
+	 * data recorded by an external system.
+	 * 
+	 * <p>
+	 * Implementations that are not able to back-fill data with arbitrary
+	 * timestamps keep the default, which throws an {@link OpenemsException}.
+	 * 
+	 * @param address the {@link ChannelAddress} to write
+	 * @param data    the values by timestamp
+	 * @throws OpenemsNamedException on error or if historic write is not supported
+	 */
+	public default void writeHistoricData(ChannelAddress address, SortedMap<ZonedDateTime, JsonElement> data)
+			throws OpenemsNamedException {
+		throw new OpenemsException("Historic write not supported by " + this.id());
+	}
 
 }

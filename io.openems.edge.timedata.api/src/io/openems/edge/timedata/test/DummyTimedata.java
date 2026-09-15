@@ -68,6 +68,29 @@ public class DummyTimedata extends AbstractDummyOpenemsComponent<DummyTimedata> 
 	}
 
 	@Override
+	public void writeHistoricData(ChannelAddress address, SortedMap<ZonedDateTime, JsonElement> data)
+			throws OpenemsNamedException {
+		data.forEach((timestamp, value) -> this.add(timestamp, address, value));
+	}
+
+	/**
+	 * Gets all stored values of the given {@link ChannelAddress}.
+	 *
+	 * @param channelAddress the {@link ChannelAddress}
+	 * @return the values by timestamp
+	 */
+	public SortedMap<ZonedDateTime, JsonElement> getValues(ChannelAddress channelAddress) {
+		SortedMap<ZonedDateTime, JsonElement> result = new TreeMap<>();
+		for (var entry : this.data.entrySet()) {
+			var value = entry.getValue().get(channelAddress);
+			if (value != null) {
+				result.put(entry.getKey(), value);
+			}
+		}
+		return result;
+	}
+
+	@Override
 	public SortedMap<ZonedDateTime, SortedMap<ChannelAddress, JsonElement>> queryHistoricData(String edgeId,
 			ZonedDateTime fromDate, ZonedDateTime toDate, Set<ChannelAddress> channels, Resolution resolution)
 			throws OpenemsNamedException {

@@ -4,6 +4,8 @@ import static java.util.Collections.emptySortedMap;
 
 import java.net.URI;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -29,6 +31,7 @@ import com.influxdb.client.write.Point;
 
 import io.openems.common.channel.AccessMode;
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
+import io.openems.common.exceptions.OpenemsException;
 import io.openems.common.oem.OpenemsEdgeOem;
 import io.openems.common.timedata.Resolution;
 import io.openems.common.types.ChannelAddress;
@@ -165,6 +168,56 @@ public class TimedataInfluxDbImpl extends AbstractOpenemsComponent
 				this.influxConnector.write(point);
 			}
 		}
+	}
+
+	@Override
+	public void writeHistoricData(ChannelAddress address, SortedMap<ZonedDateTime, JsonElement> data)
+			throws OpenemsNamedException {
+		if (this.influxConnector == null) {
+			throw new OpenemsException("InfluxDB connector is not initialized");
+		}
+		for (var point : buildHistoricPoints(this.config.measurement(), address, data)) {
+			this.influxConnector.write(point);
+		}
+	}
+
+	/**
+	 * Builds one InfluxDB {@link Point} per timestamp for the given
+	 * {@link ChannelAddress}. Values that are not JSON numbers, booleans or strings
+	 * are skipped.
+	 *
+	 * @param measurement the InfluxDB measurement
+	 * @param address     the {@link ChannelAddress}
+	 * @param data        the values by timestamp
+	 * @return the list of {@link Point}s
+	 */
+	protected static List<Point> buildHistoricPoints(String measurement, ChannelAddress address,
+			SortedMap<ZonedDateTime, JsonElement> data) {
+		var field = address.toString();
+		var result = new ArrayList<Point>(data.size());
+		for (var entry : data.entrySet()) {
+			var value = entry.getValue();
+			if (value == null || !value.isJsonPrimitive()) {
+				continue;
+			}
+			var primitive = value.getAsJsonPrimitive();
+			var point = Point.measurement(measurement) //
+					.time(entry.getKey().toInstant().toEpochMilli(), WritePrecision.MS);
+			if (primitive.isNumber()) {
+				var number = primitive.getAsDouble();
+				if (number == Math.rint(number) && !Double.isInfinite(number)) {
+					point.addField(field, (long) number);
+				} else {
+					point.addField(field, number);
+				}
+			} else if (primitive.isBoolean()) {
+				point.addField(field, primitive.getAsBoolean() ? 1 : 0);
+			} else {
+				point.addField(field, primitive.getAsString());
+			}
+			result.add(point);
+		}
+		return result;
 	}
 
 	@Override

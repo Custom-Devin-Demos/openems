@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">
+  <id>urn:uuid:7bc41774-7190-4864-841c-861ac76d46c2</id>
+  <title>Green Button Usage Feed</title>
+  <updated>2024-03-02T08:00:00Z</updated>
+  <link rel="self" href="https://api.utility.example/espi/1_1/resource/Batch/Subscription/1"/>
+  <entry>
+    <id>urn:uuid:4d6f3e0f-0001-4000-8000-000000000001</id>
+    <link rel="self" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1"/>
+    <link rel="up" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint"/>
+    <link rel="related" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading"/>
+    <link rel="related" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/ElectricPowerUsageSummary"/>
+    <link rel="related" href="/espi/1_1/resource/LocalTimeParameters/01"/>
+    <title>Residential Electric Service</title>
+    <content>
+      <espi:UsagePoint>
+        <espi:ServiceCategory>
+          <espi:kind>0</espi:kind>
+        </espi:ServiceCategory>
+      </espi:UsagePoint>
+    </content>
+    <published>2024-03-01T00:00:00Z</published>
+    <updated>2024-03-02T08:00:00Z</updated>
+  </entry>
+  <entry>
+    <id>urn:uuid:4d6f3e0f-0001-4000-8000-000000000002</id>
+    <link rel="self" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading/1"/>
+    <link rel="up" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading"/>
+    <link rel="related" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading/1/IntervalBlock"/>
+    <link rel="related" href="/espi/1_1/resource/ReadingType/1"/>
+    <title>Fifteen Minute Electricity Consumption</title>
+    <content>
+      <espi:MeterReading/>
+    </content>
+    <published>2024-03-01T00:00:00Z</published>
+    <updated>2024-03-02T08:00:00Z</updated>
+  </entry>
+  <entry>
+    <id>urn:uuid:4d6f3e0f-0001-4000-8000-000000000003</id>
+    <link rel="self" href="/espi/1_1/resource/ReadingType/1"/>
+    <link rel="up" href="/espi/1_1/resource/ReadingType"/>
+    <title>Type of Meter Reading Data</title>
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>1</espi:commodity>
+        <espi:currency>840</espi:currency>
+        <espi:dataQualifier>12</espi:dataQualifier>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>900</espi:intervalLength>
+        <espi:kind>12</espi:kind>
+        <espi:phase>769</espi:phase>
+        <espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier>
+        <espi:timeAttribute>0</espi:timeAttribute>
+        <espi:uom>72</espi:uom>
+      </espi:ReadingType>
+    </content>
+    <published>2024-03-01T00:00:00Z</published>
+    <updated>2024-03-02T08:00:00Z</updated>
+  </entry>
+  <entry>
+    <id>urn:uuid:4d6f3e0f-0001-4000-8000-000000000004</id>
+    <link rel="self" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading/1/IntervalBlock/1"/>
+    <link rel="up" href="/espi/1_1/resource/RetailCustomer/1/UsagePoint/1/MeterReading/1/IntervalBlock"/>
+    <title>Interval Block 2024-03-01</title>
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>7200</espi:duration>
+          <espi:start>1709280000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709280000</espi:start>
+          </espi:timePeriod>
+          <espi:value>125</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709280900</espi:start>
+          </espi:timePeriod>
+          <espi:value>130</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709281800</espi:start>
+          </espi:timePeriod>
+          <espi:value>118</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709282700</espi:start>
+          </espi:timePeriod>
+          <espi:value>122</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709283600</espi:start>
+          </espi:timePeriod>
+          <espi:value>140</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709284500</espi:start>
+          </espi:timePeriod>
+          <espi:value>135</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709285400</espi:start>
+          </espi:timePeriod>
+          <espi:value>128</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>900</espi:duration>
+            <espi:start>1709286300</espi:start>
+          </espi:timePeriod>
+          <espi:value>132</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+    <published>2024-03-01T00:00:00Z</published>
+    <updated>2024-03-02T08:00:00Z</updated>
+  </entry>
+</feed>
