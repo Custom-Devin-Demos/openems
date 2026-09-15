@@ -1,0 +1,40 @@
+= Backend Simulator
+
+Simulation helpers for local OpenEMS Backend development.
+
+== Overview
+
+This bundle contains lightweight replacements for external services that are useful when running a development
+BackendApp. They avoid dependencies on production mail and demand response infrastructure.
+
+== Components
+
+=== Simulator Mailer
+
+*Name*: Simulator.Mailer
+
+*Factory-PID*: `Simulator.Mailer`
+
+*Description*: Implements the Backend `Mailer` interface by writing generated mail information to the console.
+
+.*Configuration*:
+* `id` (String): Unique component identifier (default: `SimulatorMail`)
+
+== OpenADR local loop
+
+For a local demand response loop, start a BackendApp with the `Openadr.Vtn` component from
+`io.openems.backend.openadr.vtn`. Configure the EdgeApp component `Controller.Api.OpenADR` with
+`vtnUrl=http://localhost:8082/OpenADR2/Simple/2.0b`, then submit an event:
+
+[source,shell]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"start":"now","durationMinutes":30}'
+----
+
+See the
+https://github.com/OpenEMS/openems/tree/develop/io.openems.backend.openadr.vtn[OpenADR VTN Simulator documentation icon:github[]]
+for endpoint and configuration details.
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.backend.simulator[Source Code icon:github[]]

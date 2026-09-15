@@ -1,0 +1,103 @@
+= OpenADR VTN Simulator
+
+Minimal OpenADR 2.0b Virtual Top Node simulator for local OpenEMS development.
+
+== Overview
+
+This bundle provides a small in-memory VTN with the OpenADR 2.0b simple HTTP endpoints needed to register a VEN,
+distribute demand response events, receive opt responses, and collect the latest report values. A JSON administration
+API supports local development and integration testing.
+
+== Components
+
+=== <<_openadr_vtn,OpenADR VTN Simulator>>
+
+*Name*: Openadr.Vtn
+
+*Factory-PID*: `Openadr.Vtn`
+
+.Implemented Natures/Interfaces
+* `OpenAdrVtn`
+
+*Description*: Starts an embedded Jetty server and exposes the OpenADR and administration endpoints. State is held
+in memory and is cleared when the component restarts.
+
+.*Configuration*:
+* `port` (Integer): HTTP or HTTPS port (default: `8082`)
+* `path` (String): Base service path (default: `/OpenADR2/Simple/2.0b`)
+* `vtnId` (String): VTN identifier returned to VENs (default: `openems-vtn`)
+* `pollFrequencySeconds` (Integer): Requested VEN poll frequency (default: `10`)
+* `requireTls` (Boolean): Enable HTTPS (default: `false`)
+* `keyStorePath` (String): Path to the PKCS12 key store (default: empty)
+* `keyStorePassword` (Password): Password for the PKCS12 key store (default: empty)
+
+[[_openadr_vtn]]
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.backend.openadr.vtn[Source Code icon:github[]]
+
+== OpenADR endpoints
+
+[cols="1,2"]
+|===
+|Service |Supported payloads
+
+|`/EiRegisterParty`
+|`oadrQueryRegistration`, `oadrCreatePartyRegistration`, `oadrCancelPartyRegistration`
+
+|`/EiEvent`
+|`oadrPoll`, `oadrCreatedEvent`
+
+|`/EiReport`
+|`oadrRegisterReport`, `oadrUpdateReport`, `oadrCreateReport`, `oadrCancelReport`
+
+|`/EiOpt`
+|`oadrCreateOpt`
+|===
+
+The service URLs consist of the configured base path followed by the service, for example
+`http://localhost:8082/OpenADR2/Simple/2.0b/EiEvent`.
+
+== Admin JSON API
+
+[cols="1,1,2"]
+|===
+|Method |Path |Purpose
+
+|GET |`/admin/vens` |List registered VENs
+|GET |`/admin/events` |List events and opt responses
+|POST |`/admin/events` |Create an event
+|DELETE |`/admin/events/{eventId}` |Cancel an event
+|GET |`/admin/reports` |List latest VEN reports
+|===
+
+[source,shell]
+----
+curl http://localhost:8082/OpenADR2/Simple/2.0b/admin/vens
+
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"start":"now","durationMinutes":30}'
+----
+
+== Local loop with the OpenEMS Edge
+
+. Start a BackendApp with an `Openadr.Vtn` component.
+. Start an EdgeApp with `Controller.Api.OpenADR` and configure
+  `vtnUrl=http://localhost:8082/OpenADR2/Simple/2.0b`.
+. Create a demand response event:
++
+[source,shell]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"start":"now","durationMinutes":30}'
+----
+. Observe the Edge polling the VTN, receiving the active event, and returning its opt response.
+
+== Limitations
+
+* XML signatures are not implemented.
+* `oadrCreateReport` requests are not generated.
+* Backend JSON-RPC methods are not provided because `CoreJsonRpcRequestHandlerImpl` uses a hard-coded method switch
+  without a plug-in pattern.
+* All VEN, event, opt, and report state is in memory only.
