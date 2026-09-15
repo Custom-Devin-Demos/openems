@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000000</id>
+  <title>ComEd Green Button Download My Data</title>
+  <updated>2024-06-02T05:00:00Z</updated>
+  <entry>
+    <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000001</id>
+    <link rel="self" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5"/>
+    <link rel="related" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading"/>
+    <title>Electric Usage Point</title>
+    <content>
+      <UsagePoint xmlns="http://naesb.org/espi">
+        <ServiceCategory>
+          <kind>0</kind>
+        </ServiceCategory>
+      </UsagePoint>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000002</id>
+    <link rel="self" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1"/>
+    <link rel="up" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading"/>
+    <link rel="related" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1/IntervalBlock"/>
+    <link rel="related" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/ReadingType/7"/>
+    <title>Hourly Energy Consumption</title>
+    <content>
+      <MeterReading xmlns="http://naesb.org/espi"/>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000003</id>
+    <link rel="self" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/ReadingType/7"/>
+    <title>Hourly kWh Reading Type</title>
+    <content>
+      <ReadingType xmlns="http://naesb.org/espi">
+        <accumulationBehaviour>4</accumulationBehaviour>
+        <commodity>1</commodity>
+        <currency>840</currency>
+        <dataQualifier>12</dataQualifier>
+        <flowDirection>1</flowDirection>
+        <intervalLength>3600</intervalLength>
+        <kind>12</kind>
+        <powerOfTenMultiplier>3</powerOfTenMultiplier>
+        <uom>72</uom>
+      </ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000004</id>
+    <link rel="self" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1/IntervalBlock/1"/>
+    <link rel="up" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1/IntervalBlock"/>
+    <title>2024-06-01</title>
+    <content>
+      <IntervalBlock xmlns="http://naesb.org/espi">
+        <interval>
+          <duration>86400</duration>
+          <start>1717218000</start>
+        </interval>
+        <IntervalReading>
+          <timePeriod>
+            <duration>3600</duration>
+            <start>1717218000</start>
+          </timePeriod>
+          <value>1</value>
+        </IntervalReading>
+        <IntervalReading>
+          <timePeriod>
+            <duration>3600</duration>
+            <start>1717221600</start>
+          </timePeriod>
+          <value>2</value>
+        </IntervalReading>
+        <IntervalReading>
+          <timePeriod>
+            <duration>3600</duration>
+            <start>1717225200</start>
+          </timePeriod>
+          <value>1</value>
+        </IntervalReading>
+      </IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:5a1b2c3d-0002-4000-8000-000000000005</id>
+    <link rel="self" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1/IntervalBlock/2"/>
+    <link rel="up" href="https://greenbutton.example/DataCustodian/espi/1_1/resource/RetailCustomer/9/UsagePoint/5/MeterReading/1/IntervalBlock"/>
+    <title>2024-06-02</title>
+    <content>
+      <IntervalBlock xmlns="http://naesb.org/espi">
+        <interval>
+          <duration>86400</duration>
+          <start>1717304400</start>
+        </interval>
+        <IntervalReading>
+          <timePeriod>
+            <duration>3600</duration>
+            <start>1717304400</start>
+          </timePeriod>
+          <value>3</value>
+        </IntervalReading>
+        <IntervalReading>
+          <timePeriod>
+            <duration>3600</duration>
+            <start>1717308000</start>
+          </timePeriod>
+          <value>2</value>
+        </IntervalReading>
+      </IntervalBlock>
+    </content>
+  </entry>
+</feed>

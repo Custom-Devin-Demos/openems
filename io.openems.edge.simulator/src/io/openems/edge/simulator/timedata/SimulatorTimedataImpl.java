@@ -53,6 +53,9 @@ public class SimulatorTimedataImpl extends AbstractOpenemsComponent
 
 	private Config config;
 
+	/** Values imported via {@link #writeHistoricData}; take precedence over CSV. */
+	private final SortedMap<ZonedDateTime, SortedMap<ChannelAddress, JsonElement>> historicData = new TreeMap<>();
+
 	public SimulatorTimedataImpl() {
 		super(//
 				OpenemsComponent.ChannelId.values(), //
@@ -78,22 +81,37 @@ public class SimulatorTimedataImpl extends AbstractOpenemsComponent
 			ZonedDateTime fromDate, ZonedDateTime toDate, Set<ChannelAddress> channels, Resolution resolution)
 			throws OpenemsNamedException {
 		try {
-			var data = CsvUtils.readCsvFile(this.getPath(), this.config.format(), 1);
+			// CSV is optional if data was imported via writeHistoricData()
+			var csvFile = this.getPath();
+			var data = csvFile.isFile() ? CsvUtils.readCsvFile(csvFile, this.config.format(), 1) : null;
+			if (data == null && this.historicData.isEmpty()) {
+				throw new IOException("Timedata CSV file [" + csvFile + "] not found");
+			}
 			SortedMap<ZonedDateTime, SortedMap<ChannelAddress, JsonElement>> result = new TreeMap<>();
 			var time = fromDate;
 			while (time.isBefore(toDate)) {
+				var next = time.plusSeconds(resolution.toSeconds());
 				// read Channel values
 				SortedMap<ChannelAddress, JsonElement> timeMap = new TreeMap<>();
 				for (ChannelAddress channel : channels) {
-					timeMap.put(channel, getValueAsJson(data, channel));
+					var imported = this.getHistoricValue(time, next, channel);
+					if (imported != null) {
+						timeMap.put(channel, imported);
+					} else if (data != null) {
+						timeMap.put(channel, getValueAsJson(data, channel));
+					} else {
+						timeMap.put(channel, JsonNull.INSTANCE);
+					}
 				}
 
 				// add to result
 				result.put(time, timeMap);
 
 				// prepare next time + data
-				time = time.plusSeconds(resolution.toSeconds());
-				data.nextRecord();
+				time = next;
+				if (data != null) {
+					data.nextRecord();
+				}
 			}
 			return result;
 		} catch (NumberFormatException | IOException e) {
@@ -103,13 +121,97 @@ public class SimulatorTimedataImpl extends AbstractOpenemsComponent
 	}
 
 	@Override
+	public synchronized void writeHistoricData(ChannelAddress address, SortedMap<ZonedDateTime, JsonElement> data)
+			throws OpenemsNamedException {
+		for (var entry : data.entrySet()) {
+			this.historicData //
+					.computeIfAbsent(entry.getKey(), t -> new TreeMap<>()) //
+					.put(address, entry.getValue());
+		}
+	}
+
+	/**
+	 * Gets the imported historic values of the given {@link ChannelAddress}.
+	 *
+	 * @param address the {@link ChannelAddress}
+	 * @return the values by timestamp; empty if nothing was imported
+	 */
+	public synchronized SortedMap<ZonedDateTime, JsonElement> getHistoricData(ChannelAddress address) {
+		SortedMap<ZonedDateTime, JsonElement> result = new TreeMap<>();
+		for (var entry : this.historicData.entrySet()) {
+			var value = entry.getValue().get(address);
+			if (value != null) {
+				result.put(entry.getKey(), value);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Gets the first imported value of the channel in [from, to).
+	 *
+	 * @param from    the start timestamp (inclusive)
+	 * @param to      the end timestamp (exclusive)
+	 * @param address the {@link ChannelAddress}
+	 * @return the value or null
+	 */
+	private synchronized JsonElement getHistoricValue(ZonedDateTime from, ZonedDateTime to, ChannelAddress address) {
+		for (var perTime : this.historicData.subMap(from, to).values()) {
+			var value = perTime.get(address);
+			if (value != null) {
+				return value;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Gets the energy of an imported cumulative channel in [from, to) as the
+	 * difference between the last and the first value.
+	 *
+	 * @param from    the start timestamp (inclusive)
+	 * @param to      the end timestamp (exclusive)
+	 * @param address the {@link ChannelAddress}
+	 * @return the energy or null if no numeric values were imported
+	 */
+	private synchronized JsonElement getHistoricEnergy(ZonedDateTime from, ZonedDateTime to, ChannelAddress address) {
+		Double first = null;
+		Double last = null;
+		for (var perTime : this.historicData.subMap(from, to).values()) {
+			var value = perTime.get(address);
+			if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+				continue;
+			}
+			if (first == null) {
+				first = value.getAsDouble();
+			}
+			last = value.getAsDouble();
+		}
+		if (first == null) {
+			return null;
+		}
+		return new JsonPrimitive(last - first);
+	}
+
+	@Override
 	public SortedMap<ChannelAddress, JsonElement> queryHistoricEnergy(String edgeId, ZonedDateTime fromDate,
 			ZonedDateTime toDate, Set<ChannelAddress> channels) throws OpenemsNamedException {
 		try {
-			var data = CsvUtils.readCsvFile(this.getPath(), this.config.format(), 1);
+			var csvFile = this.getPath();
+			var data = csvFile.isFile() ? CsvUtils.readCsvFile(csvFile, this.config.format(), 1) : null;
+			if (data == null && this.historicData.isEmpty()) {
+				throw new IOException("Timedata CSV file [" + csvFile + "] not found");
+			}
 			SortedMap<ChannelAddress, JsonElement> result = new TreeMap<>();
 			for (ChannelAddress channel : channels) {
-				result.put(channel, getValueAsJson(data, channel));
+				var imported = this.getHistoricEnergy(fromDate, toDate, channel);
+				if (imported != null) {
+					result.put(channel, imported);
+				} else if (data != null) {
+					result.put(channel, getValueAsJson(data, channel));
+				} else {
+					result.put(channel, JsonNull.INSTANCE);
+				}
 			}
 			return result;
 		} catch (NumberFormatException | IOException e) {

@@ -2,4 +2,8 @@
 
 Persists data of OpenEMS Edge Channels to RRD4J files.
 
+== Limitations
+
+RRD4J round-robin databases only accept updates that are newer than the last recorded timestamp. This Timedata implementation therefore does not support `Timedata.writeHistoricData()` (historic back-fill, e.g. used by the `GreenButton.Import` component) and keeps the default behaviour, which throws an `OpenemsException`. Use `Timedata.InfluxDB` or `Simulator.Timedata` when historic data needs to be imported.
+
 https://github.com/OpenEMS/openems/tree/develop/io.openems.edge.timedata.rrd4j[Source Code icon:github[]]

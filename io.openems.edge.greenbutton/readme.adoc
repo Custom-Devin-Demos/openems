@@ -1,0 +1,84 @@
+= Green Button Import
+
+Imports historic consumption data from Green Button (ESPI / NAESB REQ.21) XML documents into a Timedata service.
+
+== Overview
+
+Many US utilities (PG&E, ComEd, SDG&E, ...) let customers download their metered interval usage as a "Green Button" file, an Atom feed following the North American Energy Standards Board *Energy Services Provider Interface* (ESPI, NAESB REQ.21). This bundle parses such documents with a pure Java parser (no additional dependencies) and back-fills the interval energy values into the configured `Timedata` service, so that historic consumption shows up in the OpenEMS UI history view and is available for energy scheduling analysis.
+
+The import runs asynchronously on activation and optionally repeats every `pollingIntervalHours`, e.g. to pull a new document from a "Green Button Connect My Data" URL every day. Readings that are not newer than the `LastReading` channel are skipped, so repeated imports of overlapping documents do not duplicate data.
+
+== Supported Documents
+
+* ESPI Atom feeds (`<feed>` with `<entry>` elements) in the classic ESPI 1.x namespace `http://naesb.org/espi` and the Atom namespace `http://www.w3.org/2005/Atom`; prefixed and default namespaces are supported.
+* Resources: `UsagePoint`, `MeterReading`, `ReadingType` (`uom`, `powerOfTenMultiplier`, `accumulationBehaviour`, `flowDirection`, `commodity`, `intervalLength`, `currency`), `IntervalBlock` (`interval`) and `IntervalReading` (`timePeriod`, `value`, optional `cost` and `ReadingQuality`).
+* Atom links `rel="self"`, `rel="up"` and `rel="related"` are resolved so that every `IntervalBlock` is associated with its `MeterReading`, `ReadingType` and `UsagePoint`. If a document contains a single `ReadingType` it is used for all blocks.
+* Units: `72` = Wh, `38` = W, `73` = varh, `106` = Ah, `31` = J, `132` = BTU, `169` = therm. Energy values are converted to Wh (kWh files use `powerOfTenMultiplier` `3`), power values to W. `powerOfTenMultiplier` values like `-3`, `0` and `3` are applied.
+* Cumulative register readings (`accumulationBehaviour` `3`) are converted to per-interval energy by differencing consecutive readings; delta readings (`accumulationBehaviour` `4`, the usual case) are used as is.
+
+Only energy series with `flowDirection` `1` (forward / consumption) or unspecified are written; reverse-flow series (e.g. solar export, `flowDirection` `19`) and non-energy series are ignored.
+
+== Components
+
+=== <<_green_button_import,Green Button Import>>
+
+*Name*: Green Button Import
+
+*Factory-PID*: `GreenButton.Import`
+
+.Implemented Natures/Interfaces
+* OpenemsComponent
+* GreenButtonImport
+
+*Description*: Reads a Green Button XML document from a local file or an HTTP(S) URL, parses it and writes the consumption energy per interval to the configured `Timedata` via `Timedata.writeHistoricData()`. The values are written to `targetChannel` as cumulative Wh (like an energy meter counter, matching `_sum/ConsumptionActiveEnergy`) or, with `cumulative = false`, as Wh per interval. Optionally the average power per interval [W] is derived from the interval energy and duration and written to `powerChannel`.
+
+*Use Cases*:
+
+* Show historic consumption of a site in the history view before OpenEMS Edge was installed.
+* Regularly import usage data from a utility's Green Button Connect My Data endpoint.
+
+.*Configuration*:
+* `id` (String): Unique ID of this Component (default: `greenButton0`)
+* `alias` (String): Human-readable name of this Component; defaults to Component-ID
+* `enabled` (boolean): Is this Component enabled? (default: `true`)
+* `source` (Source): Where to read the Green Button XML from; `FILE` or `URL` (default: `FILE`)
+* `path` (String): Absolute path of the Green Button XML file (Source = FILE)
+* `url` (String): URL of the Green Button XML document (Source = URL)
+* `authorizationHeader` (String): Optional value of the HTTP Authorization header, e.g. `Bearer <token>` (Source = URL)
+* `targetChannel` (String): Channel-Address the imported energy values [Wh] are written to (default: `_sum/ConsumptionActiveEnergy`)
+* `cumulative` (boolean): Write cumulative energy [Wh] instead of the energy per interval (default: `true`)
+* `powerChannel` (String): Optional Channel-Address the average power per interval [W] is written to; empty to disable
+* `timedata_id` (String): ID of the Timedata service the data is written to (default: `timedata0`)
+* `pollingIntervalHours` (int): Re-import every x hours; `0` imports once on activation (default: `24`)
+
+.Channels
+* `ImportState` (enum `ImportState`: `IDLE`, `RUNNING`, `DONE`, `FAILED`): State of the last/current import
+* `LastImport` (LONG, epoch seconds): Timestamp of the last successful import
+* `ImportedReadings` (INTEGER): Number of interval readings written by the last import
+* `LastError` (STRING): Error message of the last failed import
+* `FirstReading` (LONG, epoch seconds): Start of the oldest imported interval
+* `LastReading` (LONG, epoch seconds): Start of the newest imported interval; readings up to this timestamp are skipped on re-import
+* `ImportFailed` (STATE, WARNING): Set while the last import failed
+
+*Timedata support*: `Timedata.InfluxDB` and `Simulator.Timedata` implement `writeHistoricData()`. `Timedata.Rrd4j` cannot back-fill historic timestamps and rejects the import with an error (see `io.openems.edge.timedata.rrd4j`).
+
+[[_green_button_import]]
+
+== Simulator Walkthrough
+
+. Start OpenEMS Edge with the Simulator bundles and open the Apache Felix Web Console (`http://localhost:8080/system/console/configMgr`).
+. Create a *Simulator Timedata* (`Simulator.Timedata`) component with `id = timedata0`. A CSV `filename` is not required for imported data.
+. Create a *Green Button Import* (`GreenButton.Import`) component:
+** `id`: `greenButton0`
+** `source`: `FILE`
+** `path`: absolute path of a Green Button file, e.g. `<openems>/io.openems.edge.greenbutton/test/io/openems/edge/greenbutton/espi/fixtures/pge-15min.xml` (8 quarter-hour readings starting 2024-03-01 08:00 UTC) or `comed-hourly.xml` (hourly kWh readings, 2024-06-01)
+** `targetChannel`: `_sum/ConsumptionActiveEnergy`
+** `timedata_id`: `timedata0`
+** `pollingIntervalHours`: `0`
+. The import starts immediately. Check the channels of `greenButton0`: `ImportState` = `DONE`, `ImportedReadings` = `8`, `FirstReading`/`LastReading` show the imported range.
+. Open OpenEMS UI, log in to the Edge and open the *History* view. Select the day of the fixture (e.g. 2024-03-01) — the consumption chart shows the imported energy from `_sum/ConsumptionActiveEnergy`, served by `Simulator.Timedata` from memory.
+. Re-activating `greenButton0` with the same file writes `0` readings because all intervals are already covered by `LastReading`.
+
+With `Timedata.InfluxDB` instead of `Simulator.Timedata` the values are persisted as InfluxDB points with the original interval timestamps.
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.edge.greenbutton[Source Code icon:github[]]
