@@ -20,7 +20,11 @@ public enum CurrencyConfig {
 	/**
 	 * Swiss Francs.
 	 */
-	CHF("Fr", "Rappen", 100f);
+	CHF("Fr", "Rappen", 100f),
+	/**
+	 * US Dollar.
+	 */
+	USD("$", "Cent", 100f);
 
 	private final String symbol;
 	private final String underPart;

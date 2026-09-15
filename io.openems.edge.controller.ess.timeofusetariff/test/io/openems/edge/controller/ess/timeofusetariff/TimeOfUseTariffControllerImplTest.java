@@ -33,7 +33,7 @@ import io.openems.edge.timeofusetariff.test.DummyTimeOfUseTariffProvider;
 
 public class TimeOfUseTariffControllerImplTest {
 
-	private static class DummyEnergyScheduler extends AbstractDummyOpenemsComponent<DummyEnergyScheduler>
+	static class DummyEnergyScheduler extends AbstractDummyOpenemsComponent<DummyEnergyScheduler>
 			implements EnergyScheduler {
 
 		private final Version version;
