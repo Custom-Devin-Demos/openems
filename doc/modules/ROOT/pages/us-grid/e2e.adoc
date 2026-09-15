@@ -38,9 +38,9 @@ The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Fel
 |===
 |Directory |File |Purpose
 
-.16+|`edge/config/`
+.17+|`edge/config/`
 |`Core/Meta.config` |Currency `USD`, timezone `America/Chicago`, ESS charging from grid allowed
-|`Scheduler/AllAlphabetically/scheduler0.config` |Scheduler
+|`Scheduler/AllAlphabetically/scheduler0.config` |Scheduler; runs `ctrlEvcs0`, `ctrlOpenAdr0`, `ctrlEssTimeOfUseTariff0`, `ctrlBalancing0` in this order so the OpenADR EVCS limit overrides `Controller.Evcs` and its ESS limits constrain the later ESS controllers
 |`Controller/Api/Websocket/ctrlApiWebsocket0.config` |Websocket API for OpenEMS UI on port 8085
 |`Simulator/Datasource/CSV/Predefined/datasource0.config` |Household load profile
 |`Simulator/Datasource/CSV/Predefined/datasource1.config` |PV production profile
@@ -48,10 +48,11 @@ The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Fel
 |`Simulator/ProductionMeter/Acting/meter1.config` |PV meter driven by `datasource1`
 |`Simulator/EssSymmetric/Reacting/ess0.config` |10 kW / 10 kWh battery, 50 % SoC
 |`Simulator/Evcs/evcs0.config` |11 kW charging station
-|`Simulator/Timedata/timedata0.config` |In-memory/CSV timedata (`~/us-grid-timedata.csv`), needed by the predictor
+|`Simulator/Timedata/timedata0.config` |In-memory/CSV timedata (`~/us-grid-timedata.csv`, incl. `_sum/UnmanagedConsumptionActivePower`), needed by the predictor
 |`Predictor/PersistenceModel/predictor0.config` |Production/consumption prediction; without it the energy scheduler logs `No periods are available` and produces no schedule
 |`TimeOfUseTariff/ComEd/timeOfUseTariff0.config` |ComEd day-ahead prices plus 45 USD/MWh ancillary costs
 |`Controller/Ess/Time-Of-Use-Tariff/ctrlEssTimeOfUseTariff0.config` |`CHARGE_CONSUMPTION`, max. 5 kW from grid
+|`Controller/Symmetric/Balancing/ctrlBalancing0.config` |Balances `ess0` against `meter0` whenever the TOU controller is in `BALANCING`; without it the ESS never moves and the scheduler sees 0 W ESS power
 |`Controller/Evcs/ctrlEvcs0.config` |`FORCE_CHARGE` for `evcs0`
 |`Controller/Api/OpenADR/ctrlOpenAdr0.config` |VEN against `http://localhost:8082`, curtails `ess0` (discharge blocked) and `evcs0` (1400 W)
 
