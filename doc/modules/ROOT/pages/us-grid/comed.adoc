@@ -70,7 +70,6 @@ The bundle ships a recorded response of the day-ahead feed as test fixture. For 
 .Expected day-ahead price curve in the OpenEMS UI (placeholder)
 image::us-grid/comed-prices-ui.png[ComEd day-ahead prices in the OpenEMS UI]
 
-// TODO: replace placeholder screenshot once the UI widget from the UI workstream is available.
 
 == References
 

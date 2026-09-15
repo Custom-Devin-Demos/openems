@@ -32,29 +32,34 @@ The `-runbundles` sections are generated with `./gradlew resolve`; CI fails if t
 
 == Ready-to-import configuration set
 
-The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Felix FileInstall configuration files (`<factoryPid>~<name>.config`):
+The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Felix Configuration Admin files in the layout of `felix.cm.dir` (`config/<factory>/<pid>/<name>.config`, each carrying `service.factoryPid`/`service.pid`):
 
 [cols="1,1,3", options="header"]
 |===
 |Directory |File |Purpose
 
-.13+|`edge/`
-|`Core.Meta.config` |Currency `USD`, timezone `America/Chicago`, ESS charging from grid allowed
-|`Scheduler.AllAlphabetically~scheduler0.config` |Scheduler
-|`Controller.Api.Websocket~ctrlApiWebsocket0.config` |Websocket API for OpenEMS UI on port 8085
-|`Simulator.Datasource.CSV.Predefined~datasource0.config` |Household load profile
-|`Simulator.Datasource.CSV.Predefined~datasource1.config` |PV production profile
-|`Simulator.GridMeter.Acting~meter0.config` |Grid meter driven by `datasource0`
-|`Simulator.ProductionMeter.Acting~meter1.config` |PV meter driven by `datasource1`
-|`Simulator.EssSymmetric.Reacting~ess0.config` |10 kW / 10 kWh battery, 50 % SoC
-|`Simulator.Evcs~evcs0.config` |11 kW charging station
-|`TimeOfUseTariff.ComEd~timeOfUseTariff0.config` |ComEd day-ahead prices plus 45 USD/MWh ancillary costs
-|`Controller.Ess.Time-Of-Use-Tariff~ctrlEssTimeOfUseTariff0.config` |`CHARGE_CONSUMPTION`, max. 5 kW from grid
-|`Controller.Evcs~ctrlEvcs0.config` |`FORCE_CHARGE` for `evcs0`
-|`Controller.Api.OpenADR~ctrlOpenAdr0.config` |VEN against `http://localhost:8082`, curtails `ess0` (discharge blocked) and `evcs0` (1400 W)
+.16+|`edge/config/`
+|`Core/Meta.config` |Currency `USD`, timezone `America/Chicago`, ESS charging from grid allowed
+|`Scheduler/AllAlphabetically/scheduler0.config` |Scheduler
+|`Controller/Api/Websocket/ctrlApiWebsocket0.config` |Websocket API for OpenEMS UI on port 8085
+|`Simulator/Datasource/CSV/Predefined/datasource0.config` |Household load profile
+|`Simulator/Datasource/CSV/Predefined/datasource1.config` |PV production profile
+|`Simulator/GridMeter/Acting/meter0.config` |Grid meter driven by `datasource0`
+|`Simulator/ProductionMeter/Acting/meter1.config` |PV meter driven by `datasource1`
+|`Simulator/EssSymmetric/Reacting/ess0.config` |10 kW / 10 kWh battery, 50 % SoC
+|`Simulator/Evcs/evcs0.config` |11 kW charging station
+|`Simulator/Timedata/timedata0.config` |In-memory/CSV timedata (`~/us-grid-timedata.csv`), needed by the predictor
+|`Predictor/PersistenceModel/predictor0.config` |Production/consumption prediction; without it the energy scheduler logs `No periods are available` and produces no schedule
+|`TimeOfUseTariff/ComEd/timeOfUseTariff0.config` |ComEd day-ahead prices plus 45 USD/MWh ancillary costs
+|`Controller/Ess/Time-Of-Use-Tariff/ctrlEssTimeOfUseTariff0.config` |`CHARGE_CONSUMPTION`, max. 5 kW from grid
+|`Controller/Evcs/ctrlEvcs0.config` |`FORCE_CHARGE` for `evcs0`
+|`Controller/Api/OpenADR/ctrlOpenAdr0.config` |VEN against `http://localhost:8082`, curtails `ess0` (discharge blocked) and `evcs0` (1400 W)
 
-|`backend/`
-|`Openadr.Vtn~vtn0.config` |VTN simulator on port 8082, no TLS
+|`edge/`
+|`us-grid-timedata.csv` |Historic data for `timedata0`; copy to `$HOME`
+
+|`backend/config/`
+|`Openadr/Vtn/vtn0.config` |VTN simulator on port 8082, no TLS
 |===
 
 === Run it
@@ -70,10 +75,10 @@ The directory `io.openems.edge.simulator/scenarios/us-grid/` contains Apache Fel
 +
 [source,bash]
 ----
-mkdir -p /tmp/openems-backend/load
-cp io.openems.edge.simulator/scenarios/us-grid/backend/*.config /tmp/openems-backend/load/
+mkdir -p /tmp/openems-backend
+cp -r io.openems.edge.simulator/scenarios/us-grid/backend/config /tmp/openems-backend/
 java -Dfelix.cm.dir=/tmp/openems-backend/config \
-     -Dfelix.fileinstall.dir=/tmp/openems-backend/load \
+     -Dopenems.data.dir=/tmp/openems-backend/data \
      -jar build/openems-backend.jar
 ----
 
@@ -81,14 +86,15 @@ java -Dfelix.cm.dir=/tmp/openems-backend/config \
 +
 [source,bash]
 ----
-mkdir -p /tmp/openems-edge/load
-cp io.openems.edge.simulator/scenarios/us-grid/edge/*.config /tmp/openems-edge/load/
+mkdir -p /tmp/openems-edge
+cp -r io.openems.edge.simulator/scenarios/us-grid/edge/config /tmp/openems-edge/
+cp io.openems.edge.simulator/scenarios/us-grid/edge/us-grid-timedata.csv ~/
 java -Dfelix.cm.dir=/tmp/openems-edge/config \
-     -Dfelix.fileinstall.dir=/tmp/openems-edge/load \
+     -Dopenems.data.dir=/tmp/openems-edge/data \
      -jar build/openems-edge.jar
 ----
 +
-Alternatively start `EdgeApp.bndrun`/`BackendApp.bndrun` from the IDE and drop the files into the `load` directory of the working directory, or enter the values from the files manually in the Apache Felix Web Console (http://localhost:8080/system/console/configMgr resp. http://localhost:8079/system/console/configMgr).
+The TOU controller publishes its first schedule at the next quarter-hour boundary (the optimizer runs until then); the ComEd forecast covers the hours for which day-ahead prices are published. Alternatively start `EdgeApp.bndrun`/`BackendApp.bndrun` from the IDE with the same `-Dfelix.cm.dir`, or enter the values from the files manually in the Apache Felix Web Console (http://localhost:8080/system/console/configMgr resp. http://localhost:8079/system/console/configMgr).
 
 . Wait for `ctrlOpenAdr0/RegistrationState = REGISTERED` (about 10 s) and check the VTN:
 +

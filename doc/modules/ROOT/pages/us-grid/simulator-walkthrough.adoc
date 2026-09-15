@@ -75,7 +75,6 @@ TIP: To use PJM instead, configure `TimeOfUseTariff.PJM` with your Data Miner 2 
 .Time-of-Use-Tariff schedule with ComEd day-ahead prices in OpenEMS UI (placeholder)
 image::us-grid/walkthrough-tou-schedule.png[TOU schedule in the UI]
 
-// TODO: replace placeholder screenshot once the UI workstream delivers the USD price rendering.
 
 == Optional: import Green Button history
 
@@ -172,7 +171,6 @@ At the next poll (≤ 10 s) the VEN receives `oadrDistributeEvent`, answers `oad
 .OpenADR event active in OpenEMS UI live view (placeholder)
 image::us-grid/walkthrough-openadr-event.png[OpenADR event active]
 
-// TODO: replace placeholder screenshot once the UI widget from the UI workstream is available.
 
 *On the VTN*
 

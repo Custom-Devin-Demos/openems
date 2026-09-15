@@ -133,7 +133,6 @@ The controller implements `ComponentJsonApi` (see xref:component-communication/i
 .OpenADR widget in OpenEMS UI live view (placeholder)
 image::us-grid/openadr-widget-ui.png[OpenADR widget]
 
-// TODO: replace placeholder screenshot once the UI widget from the UI workstream is available.
 
 == VTN simulator: `Openadr.Vtn` (OpenEMS Backend)
 
