@@ -46,6 +46,63 @@ jobs:
           flags: java
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  us-grid-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: gradle
+
+      - name: Run US grid bundle tests
+        run: |
+          tasks=()
+          for bundle in \
+            io.openems.edge.timeofusetariff.comed \
+            io.openems.edge.timeofusetariff.pjm \
+            io.openems.edge.greenbutton \
+            io.openems.edge.controller.api.openadr \
+            io.openems.backend.openadr.vtn; do
+            if [ -d "$bundle" ]; then
+              tasks+=(":$bundle:test")
+            else
+              echo "::notice::Bundle $bundle not present in this checkout, skipping"
+            fi
+          done
+          if [ "${#tasks[@]}" -eq 0 ]; then
+            echo "::notice::No US grid bundles present, nothing to test"
+            exit 0
+          fi
+          # JUnit XML reports are disabled in build.gradle.kts; re-enable them for the artifact upload.
+          cat > "$RUNNER_TEMP/junit-xml.init.gradle.kts" <<'EOF'
+          gradle.projectsEvaluated {
+            allprojects {
+              tasks.withType<Test>().configureEach {
+                reports.junitXml.required.set(true)
+              }
+            }
+          }
+          EOF
+          ./gradlew "${tasks[@]}" --continue --console=colored --warn \
+            --init-script "$RUNNER_TEMP/junit-xml.init.gradle.kts"
+
+      - name: Upload JUnit reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: us-grid-test-reports
+          path: |
+            io.openems.edge.timeofusetariff.comed/generated/test-reports/test/*.xml
+            io.openems.edge.timeofusetariff.pjm/generated/test-reports/test/*.xml
+            io.openems.edge.greenbutton/generated/test-reports/test/*.xml
+            io.openems.edge.controller.api.openadr/generated/test-reports/test/*.xml
+            io.openems.backend.openadr.vtn/generated/test-reports/test/*.xml
+          if-no-files-found: ignore
+
   build-ui:
     runs-on: ubuntu-latest
     steps:
