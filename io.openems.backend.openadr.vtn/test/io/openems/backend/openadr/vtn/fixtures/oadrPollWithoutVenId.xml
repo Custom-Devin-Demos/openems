@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07">
+	<oadr:oadrSignedObject>
+		<oadr:oadrPoll/>
+	</oadr:oadrSignedObject>
+</oadr:oadrPayload>
