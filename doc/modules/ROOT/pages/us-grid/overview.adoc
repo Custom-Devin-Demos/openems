@@ -1,0 +1,82 @@
+= US Grid Integration: Overview
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+OpenEMS was originally developed around the European electricity market (EPEX day-ahead prices in EUR, ENTSO-E, aWATTar, Tibber, ...). The _US grid integration_ adds the building blocks required to run OpenEMS Edge in a US utility territory:
+
+* **Wholesale and retail price feeds**: xref:us-grid/comed.adoc[ComEd Hourly Pricing] (Illinois retail real-time / day-ahead prices) and xref:us-grid/pjm.adoc[PJM Day-Ahead LMPs] (PJM Data Miner 2) as `TimeOfUseTariff` providers, including the new `USD` currency.
+* **Historic consumption import**: xref:us-grid/greenbutton.adoc[Green Button (ESPI)] XML import into the Timedata layer, so that a newly installed OpenEMS Edge starts with the last months of utility meter data.
+* **Demand response**: an xref:us-grid/openadr.adoc[OpenADR 2.0b VEN] Controller on the Edge that receives events from a utility VTN and curtails ESS discharge, EV charging and SG-Ready heat pumps, plus a lightweight VTN simulator in OpenEMS Backend for local testing.
+
+All new components follow the existing OpenEMS extension points; no new third-party dependencies are introduced. The xref:us-grid/simulator-walkthrough.adoc[Simulator walkthrough] shows how to try everything end-to-end without any hardware, and the xref:us-grid/release-notes.adoc[Release notes] list the new bundles and factory PIDs.
+
+== Architecture
+
+.US grid integration: bundles and data flow
+image::us-grid/architecture.png[US grid integration architecture]
+
+The same picture as text:
+
+[source]
+----
+  External services                       OpenEMS Edge                                  OpenEMS Backend
+ ┌──────────────────┐                ┌────────────────────────────────────────────┐   ┌──────────────────┐
+ │ ComEd Hourly     │  HTTPS (JSON)  │ TimeOfUseTariff.ComEd                      │   │                  │
+ │ Pricing API      ├───────────────►│  (io.openems.edge.timeofusetariff.comed)   │   │                  │
+ └──────────────────┘                │        │                                   │   │                  │
+ ┌──────────────────┐                │        │ TimeOfUseTariff.getPrices()       │   │                  │
+ │ PJM Data Miner 2 │  HTTPS (JSON)  │        ▼            (15-min, USD/MWh)      │   │                  │
+ │ da_hrl_lmps      ├───────────────►│ TimeOfUseTariff.PJM                        │   │                  │
+ └──────────────────┘                │  (io.openems.edge.timeofusetariff.pjm)     │   │                  │
+                                     │        │                                   │   │                  │
+                                     │        ▼                                   │   │                  │
+                                     │ Energy Scheduler (io.openems.edge.energy)  │   │                  │
+                                     │        │  schedule: BALANCING, DELAY_...   │   │                  │
+                                     │        ▼                                   │   │                  │
+                                     │ Controller.Ess.Time-Of-Use-Tariff ──► ESS  │   │                  │
+                                     ├────────────────────────────────────────────┤   │                  │
+ ┌──────────────────┐                │ GreenButton.Import                         │   │                  │
+ │ Utility Green    │  ESPI XML      │  (io.openems.edge.greenbutton)             │   │                  │
+ │ Button (file/URL)├───────────────►│        │ Timedata.writeHistoricData()      │   │                  │
+ └──────────────────┘                │        ▼                                   │   │                  │
+                                     │ Timedata (InfluxDB / Simulator)            │   │                  │
+                                     ├────────────────────────────────────────────┤   │                  │
+                                     │ Controller.Api.OpenADR (VEN)               │   │ Openadr.Vtn      │
+                                     │  (io.openems.edge.controller.api.openadr)  │◄──┤ (VTN simulator,  │
+                                     │   oadrPoll / oadrCreatedEvent / oadrReport │──►│  io.openems.     │
+                                     │        │ curtailment                       │   │  backend.openadr │
+                                     │        ├──► ManagedSymmetricEss (limit)    │   │  .vtn)           │
+                                     │        ├──► ManagedEvcs / EVSE (limit)     │   │       ▲          │
+                                     │        └──► SG-Ready heat pump (LOCK)      │   │       │ admin    │
+                                     └────────────────────────────────────────────┘   │  POST .../events │
+                                                                                      └──────────────────┘
+----
+
+=== Data flows
+
+Prices:: `TimeOfUseTariff.ComEd` and `TimeOfUseTariff.PJM` implement the `TimeOfUseTariff` nature (`io.openems.edge.timeofusetariff.api`). Prices are converted to the OpenEMS convention `<_meta/Currency>/MWh` at 15-minute resolution and consumed unchanged by the Energy Scheduler (`io.openems.edge.energy`), which calculates the optimal charge/discharge schedule that `Controller.Ess.Time-Of-Use-Tariff` applies to the ESS. Set `Core.Meta` → `Currency` to `USD` so that prices are shown in $ / ¢ in the UI.
+
+Historic consumption:: `GreenButton.Import` parses a Green Button (ESPI) Atom feed and writes the interval readings via the new `Timedata.writeHistoricData(ChannelAddress, SortedMap<ZonedDateTime, JsonElement>)` method. InfluxDB and the Simulator Timedata support historic writes; RRD4j does not (round-robin databases cannot be back-filled).
+
+Demand response:: `Controller.Api.OpenADR` registers with a VTN (OpenADR 2.0b, profile B, HTTP pull), polls for events and – while an event with a `SIMPLE` signal level above 0 or a `PRICE` signal above the configured threshold is active – curtails the configured ESS, EVCS/EVSE and heat pumps. Opt-in / opt-out can be changed from the UI. The Backend component `Openadr.Vtn` is an in-memory VTN with an admin JSON API to inject events for testing.
+
+== Components at a glance
+
+[cols="2,2,3", options="header"]
+|===
+|Bundle |Factory PID |Purpose
+
+|`io.openems.edge.timeofusetariff.comed` |`TimeOfUseTariff.ComEd` |ComEd Hourly Pricing (5-minute, current hour average, day-ahead)
+|`io.openems.edge.timeofusetariff.pjm` |`TimeOfUseTariff.PJM` |PJM Data Miner 2 day-ahead hourly LMPs per pnode/zone
+|`io.openems.edge.greenbutton` |`GreenButton.Import` |Green Button / ESPI XML import into Timedata
+|`io.openems.edge.controller.api.openadr` |`Controller.Api.OpenADR` |OpenADR 2.0b VEN with curtailment
+|`io.openems.backend.openadr.vtn` |`Openadr.Vtn` |OpenADR 2.0b VTN simulator (Backend)
+|===
+
+The bundle-specific reference documentation (configuration parameters, channels) is generated from each bundle's `readme.adoc` and appears under _OpenEMS Edge → Time-of-Use-Tariffs_, _Controller_ and _Device & Service_ once the bundles are part of the build.
