@@ -44,6 +44,14 @@ describe("GreenButton/Import", () => {
             ]);
         });
 
+        it("provides the modal descriptor for oe-flat-widget", () => {
+            const s: any = Object.create(FlatComponent.prototype);
+            s.component = COMPONENT;
+            s.afterIsInitialized();
+            expect(s.modalComponent.component).toBe(ModalComponent);
+            expect(s.modalComponent.componentProps).toEqual({ component: COMPONENT });
+        });
+
         it("shows import state, readings and imported range", () => {
             const s: any = Object.create(FlatComponent.prototype);
             s.component = COMPONENT;
