@@ -1,0 +1,175 @@
+[[_api_openadr]]
+= API OpenADR VEN
+
+OpenADR 2.0b (profile B) Virtual End Node that receives demand-response events from a VTN and curtails local devices.
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.edge.controller.api.openadr[Source Code icon:github[]]
+
+== Overview
+
+The OpenADR VEN controller connects an OpenEMS Edge to an OpenADR 2.0b Virtual Top Node (VTN) using the
+`simpleHttp` pull transport. It registers the Edge as a Virtual End Node (VEN), polls the VTN for
+`oadrDistributeEvent` messages, answers with `oadrCreatedEvent` (opt-in / opt-out), reports telemetry
+(`oadrRegisterReport` / `oadrUpdateReport`) and applies a safe curtailment to the configured devices while
+an event is active.
+
+.Key Capabilities
+* OpenADR 2.0b profile B, HTTP pull (`simpleHttp`), XML built and parsed with the JDK XML APIs only
+* `SIMPLE` signals (levels 0-3) and `PRICE` signals (`ELECTRICITY_PRICE`, normalised to Currency/MWh)
+* Event window state machine: before / ramp-up / active / recovery / after
+* Curtailment of ESS, EVCS, EVSE single controllers and SG-Ready heat pump controllers via their public natures and channels
+* Automatic opt-in, manual opt-out via channel or JSON-RPC (`oadrCreatedEvent optOut`, `oadrCreateOpt`)
+* Telemetry usage report (ESS, EVCS, grid power) every `reportIntervalSeconds`
+* TLS with system trust store, trust-all (test only) or a custom PKCS12 trust store plus optional client certificate
+* Exponential poll back-off and `COMMUNICATION_FAILED` state on VTN errors
+
+== Components
+
+[[_component_controller_api_openadr]]
+=== Controller.Api.OpenADR
+
+.Description
+Registers the Edge as OpenADR VEN, polls the VTN for events and curtails the configured devices during the
+active event window. All referenced devices are optional; missing devices are logged and flagged through
+`COMMUNICATION_FAILED`, the controller never throws.
+
+.Factory-PID
+`Controller.Api.OpenADR`
+
+.Service Binding
+Implements:
+
+* `io.openems.edge.controller.api.openadr.ControllerApiOpenAdr`
+* `io.openems.edge.controller.api.Controller`
+* `io.openems.edge.common.jsonapi.ComponentJsonApi`
+* `io.openems.edge.common.component.OpenemsComponent`
+
+.Configuration Parameters
+
+[cols="1,3,1,1"]
+|===
+| Parameter | Description | Type | Default
+
+| `id` | Unique component identifier | String | `ctrlOpenAdr0`
+| `alias` | Human-readable component name | String | (component-id)
+| `enabled` | Enable/disable the controller | Boolean | `true`
+| `vtnUrl` | Base URL of the VTN, e.g. `https://vtn.example.com/OpenADR2/Simple/2.0b`; the services `EiRegisterParty`, `OadrPoll`, `EiEvent`, `EiReport`, `EiOpt` are appended | String | `http://localhost:8082/OpenADR2/Simple/2.0b`
+| `venName` | VEN name sent in `oadrCreatePartyRegistration` | String | `openems-ven`
+| `venId` | VEN-ID; leave empty to let the VTN assign one | String | (empty)
+| `registrationId` | Registration-ID of a previous registration to re-register | String | (empty)
+| `pollIntervalSeconds` | Poll interval; overridden by `oadrRequestedOadrPollFreq` from the VTN | Integer | `10`
+| `tls` | `SYSTEM_TRUSTSTORE`, `TRUST_ALL` (testing only) or `CUSTOM` | Enum | `SYSTEM_TRUSTSTORE`
+| `trustStorePath` | Path to a PKCS12 trust store (`tls=CUSTOM`) | String | (empty)
+| `trustStorePassword` | Password of the trust store | String | (empty)
+| `clientCertPath` | Path to a PKCS12 key store with the VEN client certificate (optional, mutual TLS) | String | (empty)
+| `clientKeyPassword` | Password of the client key store | String | (empty)
+| `marketContext` | Only events of this market context are handled; empty accepts all | String | (empty)
+| `autoOptIn` | Automatically opt-in to every new event | Boolean | `true`
+| `ess_id` | ID of a `ManagedSymmetricEss` to curtail (optional) | String | (empty)
+| `evcs_ids` | IDs of `ManagedEvcs` to curtail | String[] | `[]`
+| `evse_ids` | IDs of `Controller.Evse.Single` controllers to curtail | String[] | `[]`
+| `heatPump_ids` | IDs of `Controller.Io.HeatPump.SgReady` controllers to lock | String[] | `[]`
+| `curtailmentEssDischargeLimitW` | Discharge cap in W for SIMPLE level 2 (0 = block discharge) | Integer | `0`
+| `curtailmentEvcsChargeLimitW` | Charge power limit in W applied to each EVCS (0 = pause charging) | Integer | `0`
+| `priceSignalThresholdPerMwh` | PRICE signals above this value (Currency/MWh) trigger curtailment | Double | `100`
+| `reportIntervalSeconds` | Interval of `oadrUpdateReport` telemetry reports | Integer | `60`
+|===
+
+.Channels
+
+[cols="1,1,3"]
+|===
+| Channel | Type | Description
+
+| `RegistrationState` | Enum `UNREGISTERED, REGISTERING, REGISTERED, FAILED` | State of the VEN registration
+| `VenId` | String | VEN-ID assigned by the VTN
+| `ActiveEventId` | String | ID of the currently active event
+| `ActiveEventSignalLevel` | Integer | SIMPLE level of the active event, `-1` if none
+| `ActiveEventPrice` | Double | PRICE of the active event in Currency/MWh
+| `ActiveEventStart` / `ActiveEventEnd` | Long | Start/end of the active period (epoch seconds)
+| `EventCount` | Integer | Number of known (not cancelled/completed) events
+| `OptState` | Enum `OPT_IN, OPT_OUT` | Opt state of the active/next event
+| `SetOptState` | Write Enum | Write `OPT_IN` / `OPT_OUT` to change the opt state
+| `CurtailmentActive` | Boolean | Curtailment is currently applied
+| `LastPoll` | Long | Time of the last VTN communication (epoch seconds)
+| `HttpStatusCode` | Integer | HTTP status of the last VTN request
+| `CommunicationFailed` | State (Fault) | VTN unreachable / rejected a message, or a configured device is missing
+|===
+
+.JSON-RPC Methods
+* `getActiveEvents` -> `{ events: [ { eventId, signalType, level, price, start, end, optState } ] }`
+* `setOptState { eventId, optState: "OPT_IN" | "OPT_OUT" }` -> sends `oadrCreatedEvent`/`oadrCreateOpt` for that event
+
+.Signal to Action Mapping
+
+[cols="1,1,3"]
+|===
+| Signal | Value | Action during the active window
+
+| `SIMPLE` | `0` normal | No curtailment (device behaviour restored)
+| `SIMPLE` | `1` moderate | ESS: no charging from grid (`setActivePowerGreaterOrEquals(0)`); EVCS: `curtailmentEvcsChargeLimitW`; EVSE: mode `ZERO`; SG-Ready: `LOCK`
+| `SIMPLE` | `2` high | As level 1, plus ESS discharge capped to `curtailmentEssDischargeLimitW` (`setActivePowerLessOrEquals`)
+| `SIMPLE` | `3` special | As level 1, plus ESS held at 0 W (`setActivePowerEqualsWithoutFilter(0)`)
+| `PRICE` | `> priceSignalThresholdPerMwh` | Treated as SIMPLE level 2
+| `PRICE` | `<= priceSignalThresholdPerMwh` | No curtailment
+|===
+
+Ramp-up (`x-eiRampUp`) and recovery (`x-eiRecovery`) durations extend the curtailment window before and after
+the active period. After the event (or on cancellation, opt-out, or deactivation) all changed device settings
+are restored: ESS/EVCS constraints are simply no longer written, EVSE and SG-Ready controller configurations
+are reset to their previous values via Configuration Admin.
+
+.Security Notes
+* Production VTNs require TLS (OpenADR 2.0b mandates TLS 1.2 with, typically, client certificates). Use
+  `tls=SYSTEM_TRUSTSTORE` or `tls=CUSTOM` with a PKCS12 trust store and set `clientCertPath` for mutual TLS.
+* `TRUST_ALL` disables certificate validation and must only be used against a local simulator.
+* Plain `http://` URLs are accepted for the local simulator only.
+* XML parsing uses secure processing (no DTDs, no external entities).
+* Passwords are stored in the component configuration; do not log them.
+
+== Simulator Walkthrough
+
+The backend bundle `io.openems.backend.openadr.vtn` (factory PID `Openadr.Vtn`) provides an in-memory VTN
+simulator with the following contract (default port `8082`, path `/OpenADR2/Simple/2.0b`):
+
+* OpenADR services: `${path}/EiRegisterParty`, `${path}/OadrPoll`, `${path}/EiEvent`, `${path}/EiReport`, `${path}/EiOpt`
+* Admin API: `POST ${path}/admin/events`, `GET ${path}/admin/events`, `GET ${path}/admin/vens`, `DELETE ${path}/admin/events/{id}`
+
+. Start OpenEMS Backend with an `Openadr.Vtn` component (`port=8082`, `requireTls=false`).
+. Start OpenEMS Edge (e.g. the simulator setup with `Simulator.EssSymmetric.Reacting` as `ess0` and
+  `Evcs.Simulator` as `evcs0`) and add a `Controller.Api.OpenADR` component:
++
+[source,json]
+----
+{
+  "id": "ctrlOpenAdr0",
+  "vtnUrl": "http://localhost:8082/OpenADR2/Simple/2.0b",
+  "venName": "openems-sim",
+  "tls": "SYSTEM_TRUSTSTORE",
+  "ess_id": "ess0",
+  "evcs_ids": ["evcs0"],
+  "curtailmentEssDischargeLimitW": 0,
+  "curtailmentEvcsChargeLimitW": 0,
+  "priceSignalThresholdPerMwh": 100
+}
+----
++
+The channel `ctrlOpenAdr0/RegistrationState` changes to `REGISTERED` and `ctrlOpenAdr0/VenId` shows the assigned VEN-ID.
+. Create a SIMPLE event starting now for 15 minutes via the admin API:
++
+[source,bash]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"start":"2026-01-01T12:00:00Z","durationMinutes":15}'
+----
++
+Within one poll interval `ActiveEventId` is set, `ActiveEventSignalLevel` shows `2`, `CurtailmentActive` is `true`,
+the ESS no longer charges from grid and `evcs0/SetChargePowerLimit` is `0`.
+. Create a PRICE event (`{"signalType":"PRICE","price":250,"start":"...","durationMinutes":15}`): curtailment is
+  applied because `250 > priceSignalThresholdPerMwh`.
+. Opt-out: write `OPT_OUT` to `ctrlOpenAdr0/SetOptState` or call JSON-RPC
+  `setOptState {"eventId":"<id>","optState":"OPT_OUT"}`; the VEN sends `oadrCreatedEvent optOut` and
+  `oadrCreateOpt`, curtailment is released.
+. Delete the event (`DELETE .../admin/events/{id}`): the VTN distributes it with `eventStatus=cancelled`,
+  the controller restores the devices.
