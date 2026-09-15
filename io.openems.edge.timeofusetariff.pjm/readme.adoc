@@ -1,0 +1,83 @@
+= PJM Day-Ahead LMP
+
+Retrieves day-ahead hourly Locational Marginal Prices (LMPs) from the PJM Data Miner 2 API as a Time-Of-Use Tariff.
+
+== Overview
+
+This bundle provides a `TimeOfUseTariff` for the PJM Interconnection (US Mid-Atlantic/Midwest grid). It polls the Data Miner 2 feed `da_hrl_lmps` for the configured pricing node (pnode), e.g. the COMED zone, and exposes the day-ahead hourly `total_lmp_da` values as quarter-hourly prices in Currency/MWh. PJM prices are published in $/MWh and are used without scaling; configure the currency `USD` in the `Core.Meta` component. Optional ancillary costs (per MWh) can be added to every price to model transmission, capacity or retail adders.
+
+The day-ahead market results for the next operating day are typically published around 13:30 EPT (Eastern Prevailing Time, `America/New_York`). The component therefore requests today and tomorrow (in EPT) once per polling interval (default: hourly), so tomorrow's prices become available shortly after publication. Each request is retried with exponential backoff (30 s, 60 s, 120 s, ...) up to `maxRetries` times before falling back to the regular polling interval; the OpenEMS cycle is never blocked.
+
+== Supported Devices
+
+* PJM Data Miner 2 REST API, feed `da_hrl_lmps` (Day-Ahead Hourly LMPs): https://dataminer2.pjm.com/feed/da_hrl_lmps/definition[Feed definition icon:external-link[]]
+* Any PJM pricing node (`pnode_id`): zones (e.g. COMED `33092371`, PJM-RTO `1`), hubs, aggregates and buses
+
+.Supported API details
+* Endpoint: `GET https://api.pjm.com/api/v1/da_hrl_lmps`
+* Header: `Ocp-Apim-Subscription-Key: <apiKey>`
+* Query parameters: `rowCount=100`, `startRow=1`, `datetime_beginning_ept=<M/d/yyyy 00:00> to <M/d/yyyy 23:59>`, `pnode_id=<id>`, `fields=datetime_beginning_utc,datetime_beginning_ept,pnode_id,pnode_name,total_lmp_da,system_energy_price_da,congestion_price_da,marginal_loss_price_da`, `format=json`
+* Response: JSON object with `items` (array of hourly records), `totalRows` and `links` (`rel` = `self`, `next`, `previous`, `metadata`). Additional pages are fetched by following `links.next`.
+* Timestamps: `datetime_beginning_utc` is preferred; `datetime_beginning_ept` is interpreted in `America/New_York` as fallback. DST days with 23 or 25 hours are handled correctly, because every hour has a distinct UTC instant.
+
+=== Obtaining a free API key
+
+. Register at https://apiportal.pjm.com[PJM API Portal icon:external-link[]] (free of charge) and sign in.
+. Open *Products* → *Data Miner 2 API* and subscribe. The subscription is approved automatically.
+. Open *Profile*; the *Primary key* (or *Secondary key*) listed for the Data Miner 2 subscription is the `Ocp-Apim-Subscription-Key` to configure as `apiKey`.
+. The pnode ID of a zone or bus can be looked up in Data Miner 2 under https://dataminer2.pjm.com/feed/pnode[Pricing Nodes icon:external-link[]].
+
+== Components
+
+=== <<_time_of_use_tariff_pjm,Time-Of-Use Tariff PJM>>
+
+*Name*: Time-Of-Use Tariff PJM
+
+*Factory-PID*: `TimeOfUseTariff.PJM`
+
+.Implemented Natures/Interfaces
+* TimeOfUseTariff
+* OpenemsComponent
+
+*Description*: Fetches PJM day-ahead hourly LMPs for one pricing node and provides them as `TimeOfUsePrices` at 15-minute resolution (every hourly value is expanded into four quarters). The prices are the `total_lmp_da` values in Currency/MWh plus the configured ancillary costs.
+
+.*Configuration*:
+* `id` (String): Component-ID (default: `timeOfUseTariff0`)
+* `alias` (String): Human-readable name
+* `enabled` (boolean): Is this component enabled? (default: `true`)
+* `apiKey` (String, password): PJM Data Miner 2 subscription key (`Ocp-Apim-Subscription-Key`)
+* `pnodeId` (long): PJM pricing node ID (default: `33092371` = COMED zone)
+* `zone` (String): Pricing node name (`pnode_name`); used to match items if `pnodeId` is `0` (default: `COMED`)
+* `pollingIntervalMinutes` (int): Interval between price updates in minutes (default: `60`)
+* `ancillaryCostsPerMwh` (double): Additional costs in Currency/MWh added to every price (default: `0`)
+* `httpTimeoutSeconds` (int): Connect and read timeout for HTTP requests (default: `15`)
+* `maxRetries` (int): Number of fast retries with exponential backoff after a failed request (default: `3`)
+* `useFixtureFile` (String): Optional path to a recorded Data Miner 2 JSON response. If set, prices are read from this file instead of the PJM API (offline/simulator mode)
+
+.*Channels*:
+* `HttpStatusCode` (INTEGER): HTTP status code of the last request; `-1` if no response was received (e.g. timeout, invalid JSON)
+* `LastSuccessfulUpdate` (LONG, seconds): Epoch seconds of the last successful price update
+* `ConsecutiveFailures` (INTEGER): Number of consecutive failed price updates; reset to `0` on success
+* `PnodeId` (LONG): The configured pricing node ID
+
+[[_time_of_use_tariff_pjm]]
+
+== Simulator walkthrough
+
+The component can be run without network access and without an API key by using a recorded response as fixture:
+
+. Start OpenEMS Edge with the simulator setup (e.g. `Simulator.App` or a manually configured `Core.Meta` with currency `USD`, a simulated `Ess`, `Meter` and `Timedata`).
+. Copy a recorded Data Miner 2 response, e.g. `test/io/openems/edge/timeofusetariff/pjm/pjm-page2.json` from this bundle, to the Edge host, e.g. `/etc/openems.d/pjm-fixture.json`. Any response of the `da_hrl_lmps` feed saved as JSON works; record your own with
++
+----
+curl -H "Ocp-Apim-Subscription-Key: <apiKey>" \
+  "https://api.pjm.com/api/v1/da_hrl_lmps?rowCount=100&startRow=1&format=json&pnode_id=33092371&datetime_beginning_ept=6/10/2025%2000:00%20to%206/11/2025%2023:59&fields=datetime_beginning_utc,datetime_beginning_ept,pnode_id,pnode_name,total_lmp_da,system_energy_price_da,congestion_price_da,marginal_loss_price_da" \
+  > /etc/openems.d/pjm-fixture.json
+----
+. In Apache Felix Web Console create a *Time-Of-Use Tariff PJM* (`TimeOfUseTariff.PJM`) component with `useFixtureFile` = `/etc/openems.d/pjm-fixture.json`, `pnodeId` = `33092371` and optionally `ancillaryCostsPerMwh`.
+. Set the simulator clock (`Simulator.App`) to the day covered by the fixture (e.g. `2025-06-10T10:00:00Z`); `getPrices()` only returns prices from the current quarter onwards.
+. Configure a `Controller.Ess.Time-Of-Use-Tariff` referencing the component; the prices appear in the debug log (`Controller.Debug.Log`) and in the UI's Time-Of-Use widget.
+
+For a live run, remove `useFixtureFile` and configure `apiKey` and `pnodeId` instead.
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.edge.timeofusetariff.pjm[Source Code icon:github[]]
