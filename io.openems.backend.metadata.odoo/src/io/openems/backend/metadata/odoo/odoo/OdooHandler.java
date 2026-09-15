@@ -445,6 +445,27 @@ public class OdooHandler {
 	}
 
 	/**
+	 * Returns the Edge-ID the given setup protocol belongs to.
+	 *
+	 * @param setupProtocolId the Odoo setup protocol id
+	 * @return the Edge-ID
+	 * @throws OpenemsNamedException if the setup protocol or its edge is not found
+	 */
+	public String getSetupProtocolEdgeId(int setupProtocolId) throws OpenemsNamedException {
+		final var setupProtocol = OdooUtils.readOne(this.credentials, Field.SetupProtocol.ODOO_MODEL,
+				setupProtocolId, Field.SetupProtocol.EDGE);
+		final var odooEdge = ObjectUtils.getAsObjectArrray(setupProtocol.get(Field.SetupProtocol.EDGE.id()));
+		if (odooEdge == null || odooEdge.length < 1 || !(odooEdge[0] instanceof Integer odooEdgeId)) {
+			throw new OpenemsException("No edge found for setup protocol [" + setupProtocolId + "]");
+		}
+		final var edge = this.edgeCache.getEdgeFromOdooId(odooEdgeId);
+		if (edge == null) {
+			throw new OpenemsException("No edge found for setup protocol [" + setupProtocolId + "]");
+		}
+		return edge.getId();
+	}
+
+	/**
 	 * Returns the latest {@link SetupProtocolCoreInfo}.
 	 *
 	 * @param edgeId the edge id
