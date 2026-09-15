@@ -14,3 +14,10 @@ Bundle-Version: 1.0.0.${tstamp}
 
 -testpath: \
 	${testpath},\
+	io.openems.edge.controller.ess.timeofusetariff,\
+	io.openems.edge.energy,\
+	io.openems.edge.energy.api,\
+	io.openems.edge.predictor.api,\
+	io.openems.edge.timeofusetariff.api,\
+	io.openems.edge.timeofusetariff.comed,\
+	io.openems.wrapper.jenetics,\

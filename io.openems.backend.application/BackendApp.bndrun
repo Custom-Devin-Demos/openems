@@ -57,6 +57,7 @@
 	bnd.identity;id='io.openems.backend.metadata.odoo',\
 	bnd.identity;id='io.openems.backend.metrics.prometheus',\
 	bnd.identity;id='io.openems.backend.oauthregistry',\
+	bnd.identity;id='io.openems.backend.openadr.vtn',\
 	bnd.identity;id='io.openems.backend.simulator',\
 	bnd.identity;id='io.openems.backend.timedata.aggregatedinflux',\
 	bnd.identity;id='io.openems.backend.timedata.dummy',\
@@ -157,4 +158,5 @@
 	org.owasp.encoder;version='[1.4.0,1.4.1)',\
 	org.postgresql.jdbc;version='[42.7.10,42.7.11)',\
 	reactive-streams;version='[1.0.4,1.0.5)',\
-	stax2-api;version='[4.3.0,4.3.1)'
+	stax2-api;version='[4.3.0,4.3.1)',\
+	io.openems.backend.openadr.vtn;version=snapshot

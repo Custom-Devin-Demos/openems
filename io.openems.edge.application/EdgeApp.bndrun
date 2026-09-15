@@ -66,6 +66,7 @@
 	bnd.identity;id='io.openems.edge.controller.api.common',\
 	bnd.identity;id='io.openems.edge.controller.api.modbus',\
 	bnd.identity;id='io.openems.edge.controller.api.mqtt',\
+	bnd.identity;id='io.openems.edge.controller.api.openadr',\
 	bnd.identity;id='io.openems.edge.controller.api.rest',\
 	bnd.identity;id='io.openems.edge.controller.api.websocket',\
 	bnd.identity;id='io.openems.edge.controller.asymmetric.balancingcosphi',\
@@ -155,6 +156,7 @@
 	bnd.identity;id='io.openems.edge.fenecon.pro',\
 	bnd.identity;id='io.openems.edge.fronius',\
 	bnd.identity;id='io.openems.edge.goodwe',\
+	bnd.identity;id='io.openems.edge.greenbutton',\
 	bnd.identity;id='io.openems.edge.heat.askoma',\
 	bnd.identity;id='io.openems.edge.heat.mypv',\
 	bnd.identity;id='io.openems.edge.huawei',\
@@ -217,6 +219,7 @@
 	bnd.identity;id='io.openems.edge.timedata.rrd4j',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.ancillarycosts',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.awattar',\
+	bnd.identity;id='io.openems.edge.timeofusetariff.comed',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.corrently',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.entsoe',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.ews',\
@@ -224,6 +227,7 @@
 	bnd.identity;id='io.openems.edge.timeofusetariff.hassfurt',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.luox',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.manual',\
+	bnd.identity;id='io.openems.edge.timeofusetariff.pjm',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.rabotcharge',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.swisspower',\
 	bnd.identity;id='io.openems.edge.timeofusetariff.tibber',\
@@ -513,4 +517,8 @@
 	org.owasp.encoder;version='[1.4.0,1.4.1)',\
 	reactive-streams;version='[1.0.4,1.0.5)',\
 	rrd4j;version='[3.10.0,3.10.1)',\
-	stax2-api;version='[4.3.0,4.3.1)'
+	stax2-api;version='[4.3.0,4.3.1)',\
+	io.openems.edge.controller.api.openadr;version=snapshot,\
+	io.openems.edge.greenbutton;version=snapshot,\
+	io.openems.edge.timeofusetariff.comed;version=snapshot,\
+	io.openems.edge.timeofusetariff.pjm;version=snapshot
