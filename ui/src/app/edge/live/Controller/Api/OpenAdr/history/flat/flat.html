@@ -1,0 +1,16 @@
+@if (isInitialized && component) {
+  <oe-flat-widget button [title]="component.alias"
+    [link]="'/device/' + edge.id + newNavigationUrlSegment + '/history/' + component.id + '/openadr'"
+    [icon]="{ name: 'flash-outline', color: 'normal' }">
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.EVENTS' | translate"
+      [value]="values.eventCount ?? '-'" [leftColumnWidth]="80"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.ACTIVE_EVENT' | translate"
+      [value]="OpenAdrUtils.hasActiveEvent(values) ? values.activeEventId : ('GENERAL.NO' | translate)" [leftColumnWidth]="80">
+    </oe-flat-widget-line>
+    @if (OpenAdrUtils.hasActiveEvent(values)) {
+      <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.EVENT_WINDOW' | translate"
+        [value]="OpenAdrUtils.formatEpochSeconds(values.activeEventStart) + ' - ' + OpenAdrUtils.formatEpochSeconds(values.activeEventEnd)"
+        [leftColumnWidth]="40"></oe-flat-widget-line>
+    }
+  </oe-flat-widget>
+}

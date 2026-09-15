@@ -17,6 +17,7 @@ import { CommonGridOverviewComponent } from "./edge/live/common/grid/history/ove
 import { CommonProductionHistoryOverviewComponent } from "./edge/live/common/production/history/overview/overview";
 import { CommonProductionDetailsOverviewComponent } from "./edge/live/common/production/history/phase-accurate/overview/overview";
 import { CommonSelfconsumptionOverviewComponent as SelfconsumptionChartOverviewComponent } from "./edge/live/common/selfconsumption/history/overview/overview";
+import { ControllerApiOpenAdrOverviewComponent } from "./edge/live/Controller/Api/OpenAdr/history/overview/overview";
 import { ControllerChannelThresholdOverviewComponent as ChannelthresholdChartOverviewComponent } from "./edge/live/Controller/Channelthreshold/history/overview/overview";
 import { ControllerChpOverviewComponent } from "./edge/live/Controller/ChpSoc/history/overview/overview";
 import { ControllerEnerixOverviewComponent } from "./edge/live/Controller/EnerixControl/history/overview/overview";
@@ -103,6 +104,10 @@ export const history: (/** Determines if titles in headers can be set */ customH
             {
                 path: ":componentId/modbusTcpApi",
                 component: ModbusTcpApiOverviewComponent,
+            },
+            {
+                path: ":componentId/openadr",
+                component: ControllerApiOpenAdrOverviewComponent,
             },
             {
                 path: ":componentId/time-of-use",

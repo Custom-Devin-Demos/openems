@@ -1,0 +1,23 @@
+@if (isInitialized && component) {
+  <oe-flat-widget button [title]="component.alias" [icon]="{ name: 'oe-time-of-use', color: 'normal' }"
+    [modalComponent]="modalComponent">
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER' | translate"
+      [value]="('EDGE.INDEX.WIDGETS.US_PRICES.PROVIDER_' + provider | translate) + (providerDetail ? ' (' + providerDetail + ')' : '')">
+    </oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.CURRENT_PRICE' | translate"
+      [value]="formatPrice(summary.current)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.NEXT_HOUR_PRICE' | translate"
+      [value]="formatPrice(summary.nextHour)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.TODAY_MIN' | translate"
+      [value]="formatPrice(summary.todayMin)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.TODAY_MAX' | translate"
+      [value]="formatPrice(summary.todayMax)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.LAST_UPDATE' | translate"
+      [value]="lastSuccessfulUpdate"></oe-flat-widget-line>
+    @if (consecutiveFailures > 0) {
+      <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.US_PRICES.CONSECUTIVE_FAILURES' | translate"
+        [value]="consecutiveFailures + (httpStatusCode != null ? ' (HTTP ' + httpStatusCode + ')' : '')">
+      </oe-flat-widget-line>
+    }
+  </oe-flat-widget>
+}

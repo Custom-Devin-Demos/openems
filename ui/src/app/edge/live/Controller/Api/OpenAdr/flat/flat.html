@@ -1,0 +1,20 @@
+@if (isInitialized && component) {
+  <oe-flat-widget button [title]="component.alias" [icon]="{ name: 'flash-outline', color: 'normal' }"
+    [modalComponent]="modalComponent">
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.REGISTRATION' | translate"
+      [value]="convertRegistrationState(values.registrationState)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.ACTIVE_EVENT' | translate"
+      [value]="OpenAdrUtils.hasActiveEvent(values) ? values.activeEventId : ('GENERAL.NO' | translate)">
+    </oe-flat-widget-line>
+    @if (OpenAdrUtils.hasActiveEvent(values)) {
+      <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.SIGNAL' | translate"
+        [value]="OpenAdrUtils.formatSignal(values.activeEventSignalLevel, values.activeEventPrice, currency)">
+      </oe-flat-widget-line>
+      <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.COUNTDOWN' | translate"
+        [value]="countdown"></oe-flat-widget-line>
+    }
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.CURTAILMENT' | translate"
+      [value]="(values.curtailmentActive ? 'GENERAL.ACTIVE' : 'GENERAL.INACTIVE') | translate">
+    </oe-flat-widget-line>
+  </oe-flat-widget>
+}

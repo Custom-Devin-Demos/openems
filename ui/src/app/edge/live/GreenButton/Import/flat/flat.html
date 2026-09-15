@@ -1,0 +1,17 @@
+@if (isInitialized && component) {
+  <oe-flat-widget button [title]="component.alias" [icon]="{ name: 'cloud-download-outline', color: 'normal' }"
+    [modalComponent]="modalComponent">
+    <oe-flat-widget-line [name]="'GENERAL.STATE' | translate"
+      [value]="convertImportState(values.importState)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.GREEN_BUTTON.LAST_IMPORT' | translate"
+      [value]="GreenButtonUtils.formatEpochSeconds(values.lastImport)"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.GREEN_BUTTON.IMPORTED_READINGS' | translate"
+      [value]="values.importedReadings ?? '-'"></oe-flat-widget-line>
+    <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.GREEN_BUTTON.IMPORTED_RANGE' | translate"
+      [value]="GreenButtonUtils.formatRange(values)"></oe-flat-widget-line>
+    @if (values.lastError) {
+      <oe-flat-widget-line [name]="'EDGE.INDEX.WIDGETS.GREEN_BUTTON.LAST_ERROR' | translate"
+        [value]="values.lastError"></oe-flat-widget-line>
+    }
+  </oe-flat-widget>
+}
