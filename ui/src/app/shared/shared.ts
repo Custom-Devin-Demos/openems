@@ -185,6 +185,8 @@ export namespace Currency {
                 return Label.OERE_PER_KWH;
             case "CHF":
                 return Label.RAPPEN_PER_KWH;
+            case "USD":
+                return Label.US_CENT_PER_KWH;
             case null:
             default:
                 return Label.CENT_PER_KWH;
@@ -203,6 +205,8 @@ export namespace Currency {
                 return Unit.OERE;
             case "CHF":
                 return Unit.RAPPEN;
+            case "USD":
+                return Unit.US_CENT;
             default:
                 return Unit.CENT;
         }
@@ -212,12 +216,34 @@ export namespace Currency {
         OERE_PER_KWH = "Öre/kWh",
         CENT_PER_KWH = "ct/kWh",
         RAPPEN_PER_KWH = "Rp./kWh",
+        US_CENT_PER_KWH = "¢/kWh",
     }
 
     export enum Unit {
         CENT = "Cent",
         OERE = "Öre",
         RAPPEN = "Rp.",
+        US_CENT = "¢",
+    }
+
+    /**
+     * Gets the currency symbol, e.g. for displaying prices per MWh.
+     *
+     * @param currency the currency code
+     * @returns the symbol
+     */
+    export function getCurrencySymbol(currency: string | null): string {
+        switch (currency) {
+            case "SEK":
+                return "kr";
+            case "CHF":
+                return "CHF";
+            case "USD":
+                return "$";
+            case null:
+            default:
+                return "€";
+        }
     }
 }
 

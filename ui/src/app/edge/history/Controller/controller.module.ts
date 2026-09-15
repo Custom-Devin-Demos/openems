@@ -1,4 +1,5 @@
 import { NgModule } from "@angular/core";
+import { ControllerApiOpenAdrHistory } from "../../live/Controller/Api/OpenAdr/history/openadr-history.module";
 import { ChannelThreshold } from "../../live/Controller/Channelthreshold/history/channelThreshold.module";
 import { ControllerChpHistory } from "../../live/Controller/ChpSoc/history/chp.module";
 import { ControllerEnerixControlControlHistory } from "../../live/Controller/EnerixControl/history/enerixControl.module";
@@ -13,6 +14,7 @@ import { ControllerIo } from "./Io/Io.module";
 @NgModule({
     imports: [
         ChannelThreshold,
+        ControllerApiOpenAdrHistory,
         ControllerChpHistory,
         ControllerEnerixControlControlHistory,
         ControllerEss,
@@ -25,6 +27,7 @@ import { ControllerIo } from "./Io/Io.module";
     ],
     exports: [
         ChannelThreshold,
+        ControllerApiOpenAdrHistory,
         ControllerChpHistory,
         ControllerEnerixControlControlHistory,
         ControllerEss,
