@@ -14,6 +14,7 @@ import { CommonSelfconsumption } from "./common/selfconsumption/common-selfconsu
 import { SohStatusBannerComponent } from "./common/soh/components/soh-status-banner/soh-status-banner";
 import { StorageLiveModule } from "./common/storage/storage.module";
 import { WeatherModule } from "./common/weather/weather.module";
+import { ControllerApiOpenAdr } from "./Controller/Api/OpenAdr/OpenAdr.module";
 import { Controller_ChannelthresholdComponent } from "./Controller/Channelthreshold/Channelthreshold";
 import { ControllerChpFlatComponent } from "./Controller/ChpSoc/flat/ChpSoc";
 import { Controller_ChpSocModalComponent } from "./Controller/ChpSoc/modal/modal.component";
@@ -42,6 +43,7 @@ import { Controller_Symmetric_TimeSlot_PeakShavingComponent } from "./Controller
 import { DelayedSellToGridComponent } from "./delayedselltogrid/delayedselltogrid.component";
 import { DelayedSellToGridModalComponent } from "./delayedselltogrid/modal/modal.component";
 import { EnergymonitorModule } from "./energymonitor/energymonitor.module";
+import { GreenButtonImport } from "./GreenButton/Import/Import.module";
 import { InfoComponent } from "./info/info.component";
 import { Io_Api_DigitalInputComponent } from "./Io/Api_DigitalInput/Io_Api_DigitalInput";
 import { Io_Api_DigitalInput_ModalComponent } from "./Io/Api_DigitalInput/modal/modal.component";
@@ -52,6 +54,7 @@ import { ModalComponent as EvcsClusterApiModalComponent } from "./Multiple/evcs-
 import { NavigationInfoComponent } from "./navigation-info/navigation-info";
 
 import { SystemOutageInfoComponent } from "./system-outage-info/oe-system-outage-info";
+import { TariffUsPrices } from "./Tariff/UsPrices/UsPrices.module";
 
 @NgModule({
     imports: [
@@ -64,10 +67,13 @@ import { SystemOutageInfoComponent } from "./system-outage-info/oe-system-outage
         CommonSelfconsumption,
         StorageLiveModule,
         Controller_Api_ModbusTcp,
+        ControllerApiOpenAdr,
         Controller_EnerixControl,
         ControllerEssFixActivePower,
         ControllerEssTimeOfUseTariff,
         ControllerEssGridOptimizedChargeModule,
+        GreenButtonImport,
+        TariffUsPrices,
         Controller_Evcs,
         ControllerEvseSingle,
         ControllerHeatModule,

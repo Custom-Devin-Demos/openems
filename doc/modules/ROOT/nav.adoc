@@ -82,6 +82,15 @@ include::pages/backend/service.d/_nav.adoc[]
 *** xref:backend/deploy/docker.adoc[Deploy to Docker]
 
 * xref:component-communication/index.adoc[Component Communication]
+* US grid integration
+** xref:us-grid/overview.adoc[Overview]
+** xref:us-grid/comed.adoc[ComEd Hourly Pricing]
+** xref:us-grid/pjm.adoc[PJM Day-Ahead LMPs]
+** xref:us-grid/greenbutton.adoc[Green Button Import]
+** xref:us-grid/openadr.adoc[OpenADR Demand Response]
+** xref:us-grid/simulator-walkthrough.adoc[Simulator Walkthrough]
+** xref:us-grid/e2e.adoc[End-to-End Scenario]
+** xref:us-grid/release-notes.adoc[Release Notes]
 * Simulation
 ** xref:simulation/gitpod.adoc[Live-Demo on Gitpod]
 ** xref:simulation/realtime.adoc[Real-Time Simulation]

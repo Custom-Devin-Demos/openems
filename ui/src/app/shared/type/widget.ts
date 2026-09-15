@@ -25,6 +25,7 @@ export enum WidgetNature {
 export enum WidgetFactory {
     "Controller.Api.ModbusRtu.ReadWrite",
     "Controller.Api.ModbusTcp.ReadWrite",
+    "Controller.Api.OpenADR",
     "Controller.Asymmetric.PeakShaving",
     "Controller.BraiinsOS.Single",
     "Controller.ChannelThreshold",
@@ -63,6 +64,7 @@ export enum WidgetFactory {
     "GoodWe.Charger-PV1",
     "GoodWe.Charger.Mppt.Two-String",
     "GoodWe.Grid-Meter",
+    "GreenButton.Import",
     "Heat.Askoma",
     "Heat.MyPv.AcThor9s",
     "Heat.MyPv",
@@ -75,6 +77,8 @@ export enum WidgetFactory {
     "System.Fenecon.Industrial.S",
     "System.Fenecon.Industrial.Tokai2",
     "System.Fenecon.Industrial.Xl",
+    "TimeOfUseTariff.ComEd",
+    "TimeOfUseTariff.PJM",
     "Weather.OpenMeteo",
 }
 

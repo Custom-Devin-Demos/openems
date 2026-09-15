@@ -1,0 +1,9 @@
+= US grid end-to-end scenario (Apache Felix configuration set)
+
+Ready-to-import Apache Felix Configuration Admin files for the US grid demonstration described in `doc/modules/ROOT/pages/us-grid/e2e.adoc`.
+
+* `edge/config/` — OpenEMS Edge: simulator meters/ESS/EVCS, `Simulator.Timedata` + `Predictor.PersistenceModel`, `TimeOfUseTariff.ComEd`, `Controller.Ess.Time-Of-Use-Tariff`, `Controller.Symmetric.Balancing`, `Controller.Evcs`, `Controller.Api.OpenADR`, `Core.Meta` (currency USD).
+* `edge/us-grid-timedata.csv` — historic data for `Simulator.Timedata`; copy to `$HOME`.
+* `backend/config/` — OpenEMS Backend: `Openadr.Vtn` simulator on port 8082.
+
+The `config/` directories use the on-disk layout of the Felix Configuration Admin persistence manager. Point the application at a copy of them with `-Dfelix.cm.dir=<dir>/config` (see `e2e.adoc` for the full commands).

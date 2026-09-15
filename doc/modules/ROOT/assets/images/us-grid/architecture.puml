@@ -1,0 +1,46 @@
+@startuml
+' US grid integration: bundles and data flow
+' Render with: plantuml architecture.puml  (produces architecture.png)
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "External services" {
+  [ComEd Hourly Pricing API] as comedApi
+  [PJM Data Miner 2\nda_hrl_lmps] as pjmApi
+  [Utility Green Button\n(ESPI file / URL)] as gbSrc
+}
+
+package "OpenEMS Edge" {
+  [TimeOfUseTariff.ComEd\nio.openems.edge.timeofusetariff.comed] as comed
+  [TimeOfUseTariff.PJM\nio.openems.edge.timeofusetariff.pjm] as pjm
+  [Energy Scheduler\nio.openems.edge.energy] as energy
+  [Controller.Ess.Time-Of-Use-Tariff] as touCtrl
+  [ESS] as ess
+  [GreenButton.Import\nio.openems.edge.greenbutton] as gb
+  [Timedata\n(InfluxDB / Simulator)] as timedata
+  [Controller.Api.OpenADR (VEN)\nio.openems.edge.controller.api.openadr] as ven
+  [ManagedEvcs / EVSE] as evcs
+  [SG-Ready heat pump] as hp
+}
+
+package "OpenEMS Backend" {
+  [Openadr.Vtn\nio.openems.backend.openadr.vtn] as vtn
+  [Admin JSON API\nPOST .../admin/events] as admin
+}
+
+comedApi --> comed : HTTPS JSON (cents/kWh)
+pjmApi --> pjm : HTTPS JSON ($/MWh)
+comed --> energy : getPrices()\n15-min, USD/MWh
+pjm --> energy : getPrices()\n15-min, USD/MWh
+energy --> touCtrl : schedule
+touCtrl --> ess : set-points
+
+gbSrc --> gb : ESPI Atom XML
+gb --> timedata : writeHistoricData()
+
+vtn <--> ven : oadrPoll / oadrDistributeEvent\noadrCreatedEvent / oadrUpdateReport
+admin --> vtn : create event
+ven --> ess : discharge limit
+ven --> evcs : charge power limit
+ven --> hp : LOCK
+@enduml

@@ -89,6 +89,11 @@
                   <modbusTcpApiWidget [componentId]="widget.componentId"></modbusTcpApiWidget>
                 </ion-col>
               }
+              @case ("Controller.Api.OpenADR") {
+                <ion-col size="12" size-md="6" size-lg="4" size-xl="3">
+                  <oe-controller-api-openadr-history-widget [componentId]="widget.componentId"></oe-controller-api-openadr-history-widget>
+                </ion-col>
+              }
               @case ("Controller.Ess.Time-Of-Use-Tariff") {
                 <ion-col size="12" size-md="6" size-lg="4" size-xl="3">
                   <timeOfUseTariffWidget [componentId]="widget.componentId"></timeOfUseTariffWidget>

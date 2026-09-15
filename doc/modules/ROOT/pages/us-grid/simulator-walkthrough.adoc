@@ -1,0 +1,197 @@
+= Simulator Walkthrough
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+This walkthrough runs the complete xref:us-grid/overview.adoc[US grid integration] on a single developer machine without any hardware, internet-dependent price feeds or a utility VTN:
+
+. OpenEMS Edge with simulated PV, load and ESS, the ComEd tariff in offline fixture mode, the Time-of-Use-Tariff controller and the OpenADR VEN,
+. OpenEMS Backend with the OpenADR VTN simulator,
+. a demand-response event injected via `curl`, observed in OpenEMS UI.
+
+It assumes you have completed the xref:gettingstarted.adoc[Getting Started] guide once, i.e. you know how to start EdgeApp/BackendApp from your IDE or the release JARs and how to use the Apache Felix Web Console (http://localhost:8080/system/console/configMgr for Edge, http://localhost:8079/system/console/configMgr for Backend).
+
+== Prepare OpenEMS Edge
+
+. Start `EdgeApp` (`io.openems.edge.application/EdgeApp.bndrun`).
+. Open the http://localhost:8080/system/console/configMgr[Apache Felix Web Console Configuration] of OpenEMS Edge.
+. Configure the base simulator system as in Getting Started:
+* _Scheduler All Alphabetically_ (`Scheduler.AllAlphabetically`)
+* _Simulator DataSource: CSV Predefined_ → `datasource0`, source `H0_HOUSEHOLD_SUMMER_WEEKDAY_STANDARD_LOAD_PROFILE`
+* _Simulator GridMeter Acting_ → `meter0`, datasource `datasource0`
+* _Simulator EssSymmetric Reacting_ → `ess0` (defaults)
+* optionally _Simulator ProductionMeter Acting_ → `meter1` with a second CSV datasource for PV
+. Open _Core Meta_ (`Core.Meta`) and set `Currency` to `USD`.
++
+[NOTE]
+====
+All prices in OpenEMS are stored in `Currency/MWh`. With `USD` the UI shows `$/kWh` resp. `¢/kWh`.
+====
+
+== Configure the ComEd tariff (offline fixture mode)
+
+. Add _Time-Of-Use Tariff ComEd_ (`TimeOfUseTariff.ComEd`):
++
+[cols="1,1,3"]
+|===
+|`id` |`timeOfUseTariff0` |
+|`feed` |`DAY_AHEAD` |Hourly day-ahead prices give the scheduler a 24 h outlook
+|`pollingIntervalMinutes` |`5` |
+|`ancillaryCostsPerMwh` |`45` |Example delivery surcharge: 4.5 ¢/kWh
+|===
++
+For a machine without internet access the bundle documents how to point the component at its recorded day-ahead fixture instead of `hourlypricing.comed.com` (see the bundle's `readme.adoc`, section _Simulator walkthrough_). In fixture mode the recorded 48 hours are replayed relative to the current day so that the schedule always covers "now".
+
+. Check the log: after the first poll the component logs the price curve through `TimeOfUseTariffUtils.generateDebugLog`, e.g.
++
+[source]
+----
+INFO [TimeOfUseTariff.ComEd] [timeOfUseTariff0] Price [USD/MWh] now: 28.5 | min: 19.0 | max: 61.3 | ...
+----
++
+and the channels `timeOfUseTariff0/HttpStatusCode = 200`, `timeOfUseTariff0/LastSuccessfulUpdate`, `timeOfUseTariff0/ConsecutiveFailures = 0`.
+
+TIP: To use PJM instead, configure `TimeOfUseTariff.PJM` with your Data Miner 2 `apiKey` and leave `pnodeId = 33092371` (COMED zone). Only one `TimeOfUseTariff` provider should be active at a time.
+
+== Configure the Time-of-Use-Tariff controller
+
+. Add _Controller Ess Time-Of-Use Tariff_ (`Controller.Ess.Time-Of-Use-Tariff`):
++
+[cols="1,1,3"]
+|===
+|`id` |`ctrlEssTimeOfUseTariff0` |
+|`ess_id` |`ess0` |
+|`mode` |`AUTOMATIC` |
+|`controlMode` |`CHARGE_CONSUMPTION` |Allows charging from the grid in cheap hours; `DELAY_DISCHARGE` only delays discharge
+|`maxChargePowerFromGrid` |`5000` |
+|===
+. The Energy Scheduler (`io.openems.edge.energy`, activated automatically) now calculates a schedule from the ComEd prices and the simulated load. Watch the log for `EnergyScheduler` output and the channels `ctrlEssTimeOfUseTariff0/StateMachine` (`BALANCING`, `DELAY_DISCHARGE`, `CHARGE_GRID`, ...).
+
+.Time-of-Use-Tariff schedule with ComEd day-ahead prices in OpenEMS UI (placeholder)
+image::us-grid/walkthrough-tou-schedule.png[TOU schedule in the UI]
+
+
+== Optional: import Green Button history
+
+. Configure _Simulator Timedata_ (`Simulator.Timedata`) → `timedata0` (or `Timedata.InfluxDB` if you run InfluxDB locally – `Timedata.Rrd4j` does not support historic writes).
+. Add _Green Button Import_ (`GreenButton.Import`):
++
+[cols="1,1"]
+|===
+|`id` |`greenButton0`
+|`source` |`FILE`
+|`path` |absolute path of a Green Button XML file, e.g. the sample under `io.openems.edge.greenbutton/test/`
+|`targetChannel` |`_sum/ConsumptionActiveEnergy`
+|`timedata_id` |`timedata0`
+|`pollingIntervalHours` |`0`
+|===
+. Verify `greenButton0/ImportState = DONE`, `greenButton0/ImportedReadings > 0`. In OpenEMS UI → _History_, navigate to the imported date range to see the consumption.
+
+== Start the OpenADR VTN simulator in OpenEMS Backend
+
+. Start `BackendApp` (`io.openems.backend.application/BackendApp.bndrun`).
+. Open the http://localhost:8079/system/console/configMgr[Apache Felix Web Console Configuration] of OpenEMS Backend.
+. Configure _OpenADR VTN_ (`Openadr.Vtn`) with defaults: `port = 8082`, `path = /OpenADR2/Simple/2.0b`, `vtnId = openems-vtn`, `requireTls = false`.
+. Verify the VTN is up:
++
+[source,bash]
+----
+curl http://localhost:8082/OpenADR2/Simple/2.0b/admin/vens
+# → []
+----
+
+NOTE: The VTN simulator is independent of the `Edge.Websocket`/`Backend.Websocket` connection described in Getting Started; the VEN talks to it directly via HTTP. You can, but need not, connect the Edge to the Backend for this walkthrough.
+
+== Configure the OpenADR VEN on OpenEMS Edge
+
+. Back in the Edge Web Console, add _Controller Api OpenADR_ (`Controller.Api.OpenADR`):
++
+[cols="1,1,3"]
+|===
+|`id` |`ctrlOpenAdr0` |
+|`vtnUrl` |`http://localhost:8082/OpenADR2/Simple/2.0b` |plain HTTP against the simulator
+|`venName` |`openems-sim` |
+|`pollIntervalSeconds` |`10` |
+|`tls` |`TRUST_ALL` |simulator only
+|`autoOptIn` |`true` |
+|`ess_id` |`ess0` |
+|`curtailmentEssDischargeLimitW` |`0` |block discharge during events
+|`priceSignalThresholdPerMwh` |`150` |
+|===
+. Within a few seconds the log shows the registration and the channels change to `ctrlOpenAdr0/RegistrationState = REGISTERED`, `ctrlOpenAdr0/VenId = <assigned by VTN>`. The VTN admin API now lists the VEN:
++
+[source,bash]
+----
+curl http://localhost:8082/OpenADR2/Simple/2.0b/admin/vens
+# → [{"venId":"ven-1","venName":"openems-sim","registrationId":"reg-1","lastPoll":"..."}]
+----
+
+== Send a demand-response event
+
+Create a 30-minute `SIMPLE` level-2 event starting now (adjust `start` or omit it to start immediately):
+
+[source,bash]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"SIMPLE","level":2,"durationMinutes":30}'
+----
+
+Or a price event above the configured threshold:
+
+[source,bash]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"signalType":"PRICE","price":320.0,"durationMinutes":30}'
+----
+
+At the next poll (≤ 10 s) the VEN receives `oadrDistributeEvent`, answers `oadrCreatedEvent optIn` and applies the curtailment.
+
+=== What to observe
+
+*In the Edge log / channels*
+
+* `ctrlOpenAdr0/ActiveEventId` set, `ActiveEventSignalLevel = 2` (or `ActiveEventPrice = 320.0`), `ActiveEventStart`/`ActiveEventEnd`, `EventCount` incremented
+* `ctrlOpenAdr0/OptState = OPT_IN`, `ctrlOpenAdr0/CurtailmentActive = true`
+* `ess0/ActivePower` no longer positive (discharge blocked); the load is now covered from the grid, `meter0/ActivePower` rises accordingly
+* `ctrlEssTimeOfUseTariff0/StateMachine` may show `DELAY_DISCHARGE`/`BALANCING` – the OpenADR limit is applied through the ESS power constraints and therefore takes precedence over the price-based schedule
+
+*In OpenEMS UI (http://localhost:4200)*
+
+* The _Live_ view shows the _OpenADR_ widget with the active event, its signal, remaining time and an _Opt-out_ button.
+* Clicking _Opt-out_ writes `ctrlOpenAdr0/SetOptState = OPT_OUT`; the VEN sends `oadrCreateOpt`, `CurtailmentActive` turns `false` and the ESS resumes discharging.
+* The _History_ view shows the price curve (in ¢/kWh) and the ESS schedule.
+
+.OpenADR event active in OpenEMS UI live view (placeholder)
+image::us-grid/walkthrough-openadr-event.png[OpenADR event active]
+
+
+*On the VTN*
+
+[source,bash]
+----
+curl http://localhost:8082/OpenADR2/Simple/2.0b/admin/events
+# → [{"eventId":"evt-1","signalType":"SIMPLE","level":2,"start":"...","end":"...",
+#     "optStates":{"ven-1":"optIn"}}]
+----
+
+Cancel the event early with `curl -X DELETE http://localhost:8082/OpenADR2/Simple/2.0b/admin/events/evt-1`; the VEN releases the curtailment at its next poll.
+
+== Troubleshooting
+
+[cols="1,2", options="header"]
+|===
+|Symptom |Check
+
+|`timeOfUseTariff0/HttpStatusCode` is `0` / `ConsecutiveFailures` increases |No internet access – use the fixture mode described in the bundle `readme.adoc`
+|No schedule in `ctrlEssTimeOfUseTariff0` |`Core.Meta` currency set? Prices available (`timeOfUseTariff0/LastSuccessfulUpdate`)? The scheduler needs at least a few hours of future prices.
+|`ctrlOpenAdr0/RegistrationState = FAILED`, `CommunicationFailed` |Is `Openadr.Vtn` active on port 8082? Does `vtnUrl` use `http://` when `requireTls = false`?
+|Event created but `CurtailmentActive` stays `false` |`marketContext` filter, `autoOptIn = false` (opt in via UI), `PRICE` below `priceSignalThresholdPerMwh`, or the event `start` lies in the future
+|`greenButton0/ImportState = FAILED` with "Historic write not supported" |The configured `timedata_id` is an RRD4j instance – use `Simulator.Timedata` or `Timedata.InfluxDB`
+|===

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07"
+    xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110"
+    xmlns:pyld="http://docs.oasis-open.org/ns/energyinterop/201110/payloads"
+    xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0">
+  <oadr:oadrSignedObject>
+    <oadr:oadrCreateReport ei:schemaVersion="2.0b">
+      <pyld:requestID>req-cr-1</pyld:requestID>
+      <oadr:oadrReportRequest>
+        <ei:reportRequestID>rr-1</ei:reportRequestID>
+        <ei:reportSpecifier>
+          <ei:reportSpecifierID>openems_telemetry_usage</ei:reportSpecifierID>
+          <xcal:granularity>
+            <xcal:duration>PT1M</xcal:duration>
+          </xcal:granularity>
+          <ei:reportBackDuration>
+            <xcal:duration>PT2M</xcal:duration>
+          </ei:reportBackDuration>
+          <ei:specifierPayload>
+            <ei:rID>ess_active_power</ei:rID>
+            <ei:readingType>Direct Read</ei:readingType>
+          </ei:specifierPayload>
+          <ei:specifierPayload>
+            <ei:rID>grid_active_power</ei:rID>
+            <ei:readingType>Direct Read</ei:readingType>
+          </ei:specifierPayload>
+        </ei:reportSpecifier>
+      </oadr:oadrReportRequest>
+      <ei:venID>ven-openems-1</ei:venID>
+    </oadr:oadrCreateReport>
+  </oadr:oadrSignedObject>
+</oadr:oadrPayload>

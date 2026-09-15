@@ -1,0 +1,63 @@
+@if (isInitialized && component) {
+  <oe-modal [title]="component.alias" [component]="component">
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.REGISTRATION' | translate"
+      [value]="convertRegistrationState(values.registrationState)"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.VEN_ID' | translate"
+      [value]="values.venId ?? '-'"></oe-modal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.LAST_POLL' | translate"
+      [value]="OpenAdrUtils.formatEpochSeconds(values.lastPoll)"></oe-modal-line>
+    @if (values.communicationFailed) {
+      <oe-modal-info-line [info]="'EDGE.INDEX.WIDGETS.OPEN_ADR.COMMUNICATION_FAILED' | translate"
+        [icon]="{ name: 'alert-circle-outline', color: 'danger', size: 'small' }"></oe-modal-info-line>
+    }
+    <oe-modal-horizontal-line></oe-modal-horizontal-line>
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.ACTIVE_EVENT' | translate"
+      [value]="OpenAdrUtils.hasActiveEvent(values) ? values.activeEventId : ('GENERAL.NO' | translate)"></oe-modal-line>
+    @if (OpenAdrUtils.hasActiveEvent(values)) {
+      <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.SIGNAL' | translate"
+        [value]="OpenAdrUtils.formatSignal(values.activeEventSignalLevel, values.activeEventPrice, currency)"></oe-modal-line>
+      <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.START' | translate"
+        [value]="OpenAdrUtils.formatEpochSeconds(values.activeEventStart)"></oe-modal-line>
+      <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.END' | translate"
+        [value]="OpenAdrUtils.formatEpochSeconds(values.activeEventEnd)"></oe-modal-line>
+      <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.COUNTDOWN' | translate" [value]="countdown"></oe-modal-line>
+    }
+    <oe-modal-line [name]="'EDGE.INDEX.WIDGETS.OPEN_ADR.CURTAILMENT' | translate"
+      [value]="(values.curtailmentActive ? 'GENERAL.ACTIVE' : 'GENERAL.INACTIVE') | translate"></oe-modal-line>
+    <oe-modal-horizontal-line></oe-modal-horizontal-line>
+    <ion-item lines="none">
+      <ion-label>{{ 'EDGE.INDEX.WIDGETS.OPEN_ADR.OPT_STATE' | translate }} ({{ convertOptState(values.optState) }})</ion-label>
+      <ion-toggle slot="end" class="openadr-opt-toggle" [checked]="isOptedIn"
+        (ionChange)="setGlobalOptState($event.detail.checked)"></ion-toggle>
+    </ion-item>
+    <oe-modal-horizontal-line></oe-modal-horizontal-line>
+    <ion-item lines="none">
+      <ion-label>{{ 'EDGE.INDEX.WIDGETS.OPEN_ADR.EVENTS' | translate }} ({{ values.eventCount ?? events.length }})</ion-label>
+      <ion-button slot="end" fill="clear" (click)="loadEvents()" [disabled]="eventsLoading">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    @if (eventsError) {
+      <oe-modal-info-line [info]="'EDGE.INDEX.WIDGETS.OPEN_ADR.EVENTS_LOAD_FAILED' | translate"></oe-modal-info-line>
+    } @else if (!eventsLoading && events.length === 0) {
+      <oe-modal-info-line [info]="'EDGE.INDEX.WIDGETS.OPEN_ADR.NO_EVENTS' | translate"></oe-modal-info-line>
+    }
+    @for (event of events; track event.eventId) {
+      <ion-item lines="none" class="openadr-event">
+        <ion-label>
+          <h3>{{ event.eventId }} · {{ event.signalType }}</h3>
+          <p>{{ OpenAdrUtils.formatEventWindow(event) }}</p>
+          <p>{{ OpenAdrUtils.formatSignal(event.level, event.price, currency) }} · {{ convertOptState(event.optState) }}</p>
+        </ion-label>
+        <ion-button slot="end" size="small" fill="outline" class="openadr-event-opt-in"
+          [disabled]="event.optState === 'OPT_IN'" (click)="setEventOptState(event, 'OPT_IN')">
+          {{ 'EDGE.INDEX.WIDGETS.OPEN_ADR.OPT_IN' | translate }}
+        </ion-button>
+        <ion-button slot="end" size="small" fill="outline" class="openadr-event-opt-out"
+          [disabled]="event.optState === 'OPT_OUT'" (click)="setEventOptState(event, 'OPT_OUT')">
+          {{ 'EDGE.INDEX.WIDGETS.OPEN_ADR.OPT_OUT' | translate }}
+        </ion-button>
+      </ion-item>
+    }
+  </oe-modal>
+}

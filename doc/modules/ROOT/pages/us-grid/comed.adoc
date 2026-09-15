@@ -1,0 +1,77 @@
+= ComEd Hourly Pricing
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+Commonwealth Edison (ComEd) is the electric utility for northern Illinois, USA. Customers on the _Hourly Pricing_ program (BESH, Rider RRTP) pay the PJM real-time (or day-ahead) wholesale price for the COMED zone instead of a flat tariff. ComEd publishes these prices through a public HTTPS API without authentication:
+
+* `https://hourlypricing.comed.com/api?type=5minutefeed` – 5-minute real-time prices of the last hour(s)
+* `https://hourlypricing.comed.com/api?type=currenthouraverage` – running average of the current hour
+* `https://hourlypricing.comed.com/api?type=day_ahead_pricing` – hourly day-ahead prices for today and (after ~16:30 CT) tomorrow
+
+The bundle `io.openems.edge.timeofusetariff.comed` provides these prices as an OpenEMS `TimeOfUseTariff`, making them available to the xref:us-grid/overview.adoc[Energy Scheduler and the Time-of-Use-Tariff controller].
+
+== Component
+
+[cols="1,3"]
+|===
+|Bundle |`io.openems.edge.timeofusetariff.comed`
+|Factory PID |`TimeOfUseTariff.ComEd`
+|Nature |`TimeOfUseTariff` (`io.openems.edge.timeofusetariff.api`)
+|Default Component-ID |`timeOfUseTariff0`
+|===
+
+=== Configuration
+
+[cols="2,1,1,4", options="header"]
+|===
+|Property |Type |Default |Description
+
+|`id` |String |`timeOfUseTariff0` |Component-ID
+|`alias` |String | |Human-readable name shown in the UI
+|`enabled` |boolean |`true` |
+|`feed` |`Feed` |`DAY_AHEAD` |Which API feed to use: `FIVE_MINUTE`, `CURRENT_HOUR_AVERAGE` or `DAY_AHEAD`. Only `DAY_AHEAD` provides prices for the future and therefore a meaningful schedule; the other feeds are intended for monitoring and billing reconciliation.
+|`pollingIntervalMinutes` |int |`5` (min 1) |How often the API is queried
+|`ancillaryCostsPerMwh` |double |`0` |Constant surcharge (in `Currency/MWh`) added to every price, e.g. for delivery charges and capacity fees that are not part of the energy price
+|`httpTimeoutSeconds` |int |`15` |HTTP connect/read timeout
+|`maxRetries` |int |`3` |Retries per polling cycle before `CONSECUTIVE_FAILURES` is incremented
+|===
+
+TIP: Set `Core.Meta` → `Currency` to `USD` so that OpenEMS UI displays prices as `$/kWh` resp. `¢/kWh`.
+
+=== Unit conversion and time handling
+
+* The API returns prices in **cents per kWh**. OpenEMS uses `<Currency>/MWh`, therefore each value is multiplied by `10` (1 ¢/kWh = 10 $/MWh).
+* All timestamps are interpreted in the `America/Chicago` timezone. Day-ahead prices are published as local hour starts; the conversion to UTC uses `ZonedDateTime` so that the 23- and 25-hour DST switch days are handled correctly.
+* `TimeOfUseTariff.getPrices()` returns 15-minute values. Hourly (day-ahead / current hour average) values are expanded into four identical quarter-hours; 5-minute values are averaged into quarter-hours (three values per quarter).
+* Prices are cached in memory and served from `Instant.now(clock)` onwards; if the API is temporarily unavailable, the last successfully retrieved prices remain in use.
+
+=== Channels
+
+[cols="2,1,4", options="header"]
+|===
+|Channel |Type |Description
+
+|`HttpStatusCode` |INTEGER |HTTP status of the last request (`200` on success)
+|`LastSuccessfulUpdate` |LONG |Epoch seconds of the last successful price update
+|`ConsecutiveFailures` |INTEGER |Number of polling cycles that failed in a row; reset to `0` on success
+|`Feed` |STRING |The configured feed
+|===
+
+== Offline fixture mode for the simulator
+
+The bundle ships a recorded response of the day-ahead feed as test fixture. For a simulator setup without internet access the ComEd provider can be run against this fixture; see the xref:us-grid/simulator-walkthrough.adoc[Simulator walkthrough] and the bundle's `readme.adoc` for the exact steps.
+
+.Expected day-ahead price curve in the OpenEMS UI (placeholder)
+image::us-grid/comed-prices-ui.png[ComEd day-ahead prices in the OpenEMS UI]
+
+
+== References
+
+* https://hourlypricing.comed.com/hp-api/[ComEd Hourly Pricing API documentation]
+* https://hourlypricing.comed.com/live-prices/[ComEd live prices]

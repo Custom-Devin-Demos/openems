@@ -1,0 +1,115 @@
+= ComEd Hourly Pricing
+
+Time-of-Use tariff provider for the ComEd (Commonwealth Edison, Illinois, USA) Hourly Pricing program.
+
+== Overview
+
+This bundle retrieves real-time and day-ahead electricity prices from the public ComEd Hourly Pricing API and provides them as a `TimeOfUseTariff` at 15-minute resolution. The prices are published in Cent/kWh (USD) by ComEd and converted to `_meta/Currency` per MWh (`price * 10`), so `Core.Meta` should be configured with currency `USD`. Consumers like `Controller.Ess.Time-Of-Use-Tariff` (through the `Core Energy Scheduler`) use the prices to shift battery charging into cheap hours.
+
+The provider combines two sources:
+
+* *Day-ahead hourly prices* (today and tomorrow, as soon as ComEd publishes them) form the baseline for the future. Each hourly value is expanded into four quarters.
+* *Real-time actuals* are optionally overlaid on the current hour, depending on the configured `feed`:
+** `DAY_AHEAD`: no overlay, only day-ahead prices.
+** `FIVE_MINUTE`: the 5-minute feed is averaged into 15-minute quarters and replaces the quarters it covers.
+** `CURRENT_HOUR_AVERAGE`: the running average of the current hour replaces the whole current hour.
+
+All timestamps are handled in `America/Chicago` including daylight-saving-time transitions (23-hour spring-forward and 25-hour fall-back days). The API is polled asynchronously via the OpenEMS HTTP bridge, so the OpenEMS cycle is never blocked. On failures the polling interval grows exponentially (interval, 2x, 4x, ... capped at 30 minutes); after `maxRetries` consecutive failures the 30 minute cap is used until the next success.
+
+== Data Source
+
+* Five-minute feed: `https://hourlypricing.comed.com/api?type=5minutefeed` (JSON array of `{"millisUTC":"...","price":"..."}`, Cent/kWh, newest first). Back-fill via `datestart`/`dateend` (`yyyyMMddHHmm`, America/Chicago).
+* Current-hour average: `https://hourlypricing.comed.com/api?type=currenthouraverage` (single-element array of the same shape).
+* Day-ahead: `https://hourlypricing.comed.com/rrtp/ServletFeed?type=daynexttoday` and `type=daynexttomorrow` (JavaScript-like array `[[Date.UTC(y,m,d,h,0,0), price], ...]`; despite the name the date components are local Chicago hour starts). The `api?type=day-ahead` endpoint documented on the ComEd website does not return price data, which is why the servlet feed is used.
+* Documentation: https://hourlypricing.comed.com/hp-api/[ComEd Hourly Pricing API icon:external-link[]]
+
+== Components
+
+=== <<_time_of_use_tariff_comed,Time-Of-Use Tariff ComEd>>
+
+*Name*: Time-Of-Use Tariff ComEd
+
+*Factory-PID*: `TimeOfUseTariff.ComEd`
+
+.Implemented Natures/Interfaces
+* OpenemsComponent
+* TimeOfUseTariff
+* TimeOfUseTariffComEd
+
+*Description*: Polls the ComEd Hourly Pricing API, converts the prices to Currency/MWh at 15-minute resolution and caches them. `getPrices()` returns the cached prices starting at the current quarter.
+
+.*Configuration*:
+* `id` (String): Unique ID of this Component (default: `timeOfUseTariff0`)
+* `alias` (String): Human-readable name of this Component (default: empty)
+* `enabled` (boolean): Is this Component enabled? (default: `true`)
+* `feed` (Feed): Real-time feed overlaid on the day-ahead prices for the current hour; `DAY_AHEAD`, `FIVE_MINUTE` or `CURRENT_HOUR_AVERAGE` (default: `DAY_AHEAD`)
+* `pollingIntervalMinutes` (int): Interval between two polls of the ComEd API in minutes, minimum 1 (default: `5`)
+* `ancillaryCostsPerMwh` (double): Fixed costs in Currency/MWh added to every price, e.g. delivery charges (default: `0`)
+* `httpTimeoutSeconds` (int): Connect and read timeout for HTTP requests in seconds (default: `15`)
+* `maxRetries` (int): Number of exponentially delayed retries after a failed poll before falling back to the maximum backoff of 30 minutes (default: `3`)
+
+.*Channels*:
+* `HttpStatusCode` (INTEGER): HTTP status code of the last request; `null` if the request failed without a response
+* `LastSuccessfulUpdate` (LONG): Epoch seconds of the last successful poll cycle
+* `ConsecutiveFailures` (INTEGER): Number of consecutive failed polls; reset to 0 on success
+* `Feed` (STRING): The configured feed
+
+[[_time_of_use_tariff_comed]]
+
+== Simulator Walkthrough
+
+The scenario below runs the `Simulator App` (`io.openems.edge.simulator`) with a simulated battery, a consumption profile, `TimeOfUseTariff.ComEd` and `Controller.Ess.Time-Of-Use-Tariff`. The ComEd component requires network access; prices for the simulated day are taken from the live API, so use a clock range around the current day.
+
+. Run OpenEMS Edge using `EdgeApp.bndrun`.
+. In the Apache Felix Web Console set the currency of `Core.Meta` to `USD` and activate a "Controller Api REST/JSON Read-Write" and a "Simulator App".
+. Send the JSON-RPC request stored in `io.openems.edge.simulator/scenario-comed-time-of-use-tariff.json` (abridged below) to the REST/JSON API. The `Simulator App` deletes all existing component configurations before it starts.
+
+[source,json]
+----
+{
+   "method":"componentJsonApi",
+   "params":{
+      "componentId":"_simulator",
+      "payload":{
+         "method":"executeSimulation",
+         "params":{
+            "components":[
+               { "factoryPid":"Scheduler.AllAlphabetically", "properties":[ { "name":"id", "value":"scheduler0" } ] },
+               { "factoryPid":"Simulator.GridMeter.Reacting", "properties":[ { "name":"id", "value":"meter0" } ] },
+               { "factoryPid":"Simulator.NRCMeter.Acting", "properties":[
+                  { "name":"id", "value":"meter1" }, { "name":"datasource.id", "value":"_simulator" } ] },
+               { "factoryPid":"Simulator.EssSymmetric.Reacting", "properties":[
+                  { "name":"id", "value":"ess0" }, { "name":"maxApparentPower", "value":10000 },
+                  { "name":"capacity", "value":10200 }, { "name":"initialSoc", "value":50 } ] },
+               { "factoryPid":"TimeOfUseTariff.ComEd", "properties":[
+                  { "name":"id", "value":"timeOfUseTariff0" }, { "name":"feed", "value":"FIVE_MINUTE" },
+                  { "name":"pollingIntervalMinutes", "value":5 }, { "name":"ancillaryCostsPerMwh", "value":45.0 } ] },
+               { "factoryPid":"Controller.Ess.Time-Of-Use-Tariff", "properties":[
+                  { "name":"id", "value":"ctrlEssTimeOfUseTariff0" }, { "name":"ess.id", "value":"ess0" },
+                  { "name":"mode", "value":"AUTOMATIC" }, { "name":"controlMode", "value":"CHARGE_CONSUMPTION" },
+                  { "name":"maxChargePowerFromGrid", "value":10000 } ] },
+               { "factoryPid":"Controller.Symmetric.Balancing", "properties":[
+                  { "name":"id", "value":"ctrlBalancing0" }, { "name":"ess.id", "value":"ess0" }, { "name":"meter.id", "value":"meter0" } ] }
+            ],
+            "clock":{
+               "start":"2026-09-15T05:00:00.00Z",
+               "end":"2026-09-16T05:00:00.00Z",
+               "timeleapPerCycle":900000,
+               "executeCycleTwice":true
+            },
+            "profiles":{ "meter1/ActivePower":[436,404,373,"..."] }
+         }
+      }
+   }
+}
+----
+
+Expected behaviour: `timeOfUseTariff0` reports `Feed=FIVE_MINUTE`, `HttpStatusCode=200`, increasing `LastSuccessfulUpdate` and `ConsecutiveFailures=0`; the debug log prints the current price in USD/MWh. `ctrlEssTimeOfUseTariff0` switches to `CHARGE_GRID` in the cheapest quarters of the day-ahead curve and to `DELAY_DISCHARGE` before expensive evening hours.
+
+== Known Limitations
+
+* ComEd publishes tomorrow's day-ahead prices in the afternoon (Chicago time); until then only today's prices are available.
+* An offline fixture mode is not implemented; the component needs network access to `hourlypricing.comed.com`. The recorded fixtures under `test/.../fixtures` can be served from a local HTTP server for offline demos.
+* Exchange rates are not applied: prices are in USD and are used as-is with the configured `_meta/Currency`.
+
+https://github.com/OpenEMS/openems/tree/develop/io.openems.edge.timeofusetariff.comed[Source Code icon:github[]]

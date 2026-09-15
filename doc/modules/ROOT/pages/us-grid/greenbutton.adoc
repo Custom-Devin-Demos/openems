@@ -1,0 +1,113 @@
+= Green Button (ESPI) Import
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+https://www.greenbuttondata.org/[Green Button] is the US standard (NAESB ESPI, _Energy Services Provider Interface_) for utility customers to download or share their interval meter data. Most US utilities offer "Download My Data" (an XML file) and many offer "Connect My Data" (an OAuth-protected REST API serving the same XML).
+
+The bundle `io.openems.edge.greenbutton` imports Green Button XML into the OpenEMS Timedata layer. This is useful when an OpenEMS Edge is newly installed: the history charts and energy statistics in OpenEMS UI immediately show the last months of utility meter data instead of starting empty, and predictors can be trained on real consumption.
+
+== Component
+
+[cols="1,3"]
+|===
+|Bundle |`io.openems.edge.greenbutton`
+|Factory PID |`GreenButton.Import`
+|Default Component-ID |`greenButton0`
+|===
+
+=== Configuration
+
+[cols="2,1,1,4", options="header"]
+|===
+|Property |Type |Default |Description
+
+|`id` |String |`greenButton0` |Component-ID
+|`alias` |String | |
+|`enabled` |boolean |`true` |
+|`source` |`Source` |`FILE` |`FILE` reads the XML from `path`; `URL` downloads it from `url`
+|`path` |String | |Absolute path of the Green Button XML file (for `source = FILE`)
+|`url` |String | |HTTPS URL of an ESPI resource, e.g. `.../espi/1_1/resource/Batch/Subscription/\{id}` (for `source = URL`)
+|`authorizationHeader` |String | |Optional value of the HTTP `Authorization` header, e.g. `Bearer <access token>` (for `source = URL`)
+|`targetChannel` |String |`_sum/ConsumptionActiveEnergy` |Channel-Address the readings are written to
+|`timedata_id` |String |`timedata0` |Component-ID of the `Timedata` service to write to (InfluxDB or Simulator Timedata)
+|`pollingIntervalHours` |int |`24` |Re-import interval. `0` imports once on activation only.
+|===
+
+=== Supported XML structure
+
+The parser follows the ESPI Atom feed structure:
+
+[source]
+----
+<feed>
+  <entry> <content> <UsagePoint/> </content> </entry>
+  <entry> <content> <MeterReading/> </content> </entry>
+  <entry> <content> <ReadingType>
+      <uom>72</uom>                       <!-- 72 = Wh, 38 = W, 119 = Ah, ... -->
+      <powerOfTenMultiplier>3</powerOfTenMultiplier>
+      <accumulationBehaviour>4</accumulationBehaviour>  <!-- 4 = deltaData, 3 = cumulative -->
+      <flowDirection>1</flowDirection>    <!-- 1 = forward (consumption), 19 = reverse (production) -->
+  </ReadingType> </content> </entry>
+  <entry> <content> <IntervalBlock>
+      <interval> <duration>86400</duration> <start>1704085200</start> </interval>
+      <IntervalReading>
+        <timePeriod> <duration>900</duration> <start>1704085200</start> </timePeriod>
+        <value>350</value>
+      </IntervalReading>
+      ...
+  </IntervalBlock> </content> </entry>
+</feed>
+----
+
+* Values are scaled with `powerOfTenMultiplier` and converted to **Wh**. `uom = 38` (W) readings are converted to energy using the interval duration.
+* For `accumulationBehaviour = deltaData` the per-interval values are accumulated into a running total, because OpenEMS energy channels such as `_sum/ConsumptionActiveEnergy` are cumulative meter readings. Cumulative Green Button feeds are written as-is.
+* Timestamps are epoch seconds (UTC) in ESPI; they are converted to `ZonedDateTime` in the system default zone for the Timedata API.
+
+=== Channels
+
+[cols="2,1,4", options="header"]
+|===
+|Channel |Type |Description
+
+|`ImportState` |`ImportState` enum |`IDLE`, `RUNNING`, `DONE`, `FAILED`
+|`LastImport` |LONG |Epoch seconds of the last import attempt
+|`ImportedReadings` |INTEGER |Number of `IntervalReading` elements written by the last import
+|`LastError` |STRING |Error message of the last failed import
+|`FirstReading` / `LastReading` |LONG |Epoch seconds of the earliest/latest imported reading
+|===
+
+== Timedata: historic writes
+
+Until now the `Timedata` interface (`io.openems.edge.timedata.api`) only supported recording live channel values. The Green Button import introduces
+
+[source,java]
+----
+default void writeHistoricData(ChannelAddress address, SortedMap<ZonedDateTime, JsonElement> data)
+        throws OpenemsNamedException;
+----
+
+[cols="1,3", options="header"]
+|===
+|Timedata implementation |Historic writes
+
+|`Timedata.InfluxDB` |Supported – points are written with their original timestamps
+|`Simulator.Timedata` |Supported – kept in memory for the current process; useful for the xref:us-grid/simulator-walkthrough.adoc[simulator walkthrough]
+|`Timedata.Rrd4j` |**Not supported** – RRD4j round-robin databases cannot be updated with timestamps older than their last update. The default implementation throws `OpenemsException("Historic write not supported")`; `ImportState` becomes `FAILED` and `LastError` explains why.
+|===
+
+.Imported Green Button consumption in the OpenEMS UI history view (placeholder)
+image::us-grid/greenbutton-history-ui.png[Green Button import in the history view]
+
+// TODO: replace placeholder screenshot once the import has been run against a simulator setup.
+
+== References
+
+* https://www.greenbuttondata.org/[Green Button Alliance]
+* https://www.naesb.org/ESPI_Standards.asp[NAESB ESPI standard]
+* https://greenbuttondata.org/develop/[Sample XML files]

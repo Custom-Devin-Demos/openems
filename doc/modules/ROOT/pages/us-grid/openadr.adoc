@@ -1,0 +1,198 @@
+= OpenADR 2.0b Demand Response
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+https://www.openadr.org/[OpenADR] (Open Automated Demand Response) is the standard used by US utilities and ISOs to send demand-response events and dynamic price signals to customers. A **VTN** (Virtual Top Node, operated by the utility or aggregator) publishes events; a **VEN** (Virtual End Node, at the customer site) receives them, opts in or out and reports back.
+
+The US grid integration adds:
+
+* `Controller.Api.OpenADR` – an OpenADR 2.0b **VEN** running on OpenEMS Edge that curtails ESS discharge, EV charging and heat pumps during events (bundle `io.openems.edge.controller.api.openadr`).
+* `Openadr.Vtn` – an in-memory **VTN simulator** for OpenEMS Backend with an admin JSON API to inject events (bundle `io.openems.backend.openadr.vtn`).
+
+Both implement the 2.0b **profile B**, HTTP **pull** model: the VEN periodically polls the VTN; the VTN never opens a connection to the VEN. Payloads are the standard `oadrPayload` XML documents, built and parsed with the JDK's `javax.xml` and `io.openems.common.utils.XmlUtils` – no additional libraries.
+
+== VEN: `Controller.Api.OpenADR`
+
+[cols="1,3"]
+|===
+|Bundle |`io.openems.edge.controller.api.openadr`
+|Factory PID |`Controller.Api.OpenADR`
+|Nature |`Controller` (`io.openems.edge.controller.api`), `ComponentJsonApi`
+|Default Component-ID |`ctrlOpenAdr0`
+|===
+
+=== Configuration
+
+[cols="2,1,1,4", options="header"]
+|===
+|Property |Type |Default |Description
+
+|`id` |String |`ctrlOpenAdr0` |Component-ID
+|`alias`, `enabled` | | |
+|`vtnUrl` |String |`https://localhost:8443/OpenADR2/Simple/2.0b` |Base URL of the VTN. The services `EiRegisterParty`, `EiEvent`, `EiReport`, `EiOpt` are appended.
+|`venName` |String | |Name announced during registration
+|`venId` |String | |Optional. Normally assigned by the VTN during `oadrCreatePartyRegistration` and stored in the `VenId` channel.
+|`registrationId` |String | |Optional. Re-use an existing registration.
+|`pollIntervalSeconds` |int |`10` |`oadrPoll` interval. The VTN may request a different interval during registration.
+|`tls` |`Tls` |`SYSTEM_TRUSTSTORE` |`SYSTEM_TRUSTSTORE`, `TRUST_ALL` (simulator only!) or `CUSTOM` (`trustStorePath` / `trustStorePassword`)
+|`clientCertPath`, `clientKeyPassword` |String | |Client certificate (PKCS#12) for mutual TLS as required by certified VTNs
+|`marketContext` |String | |Only accept events of this market context (empty = all)
+|`autoOptIn` |boolean |`true` |Automatically answer `oadrCreatedEvent` with `optIn`. If `false`, events stay pending until the user opts in via the UI.
+|`ess_id` |String | |Optional `ManagedSymmetricEss` to curtail
+|`evcs_ids` |String[] | |`ManagedEvcs` components to curtail
+|`evse_ids` |String[] | |EVSE single controllers to curtail
+|`heatPump_ids` |String[] | |SG-Ready heat pump controllers to lock
+|`curtailmentEssDischargeLimitW` |int |`0` |Maximum ESS discharge power during an event (`0` = block discharge completely)
+|`curtailmentEvcsChargeLimitW` |int |`0` |Maximum charge power per EVCS/EVSE during an event (`0` = pause charging)
+|`priceSignalThresholdPerMwh` |double | |`PRICE` signals above this value (in `Currency/MWh`) trigger curtailment
+|===
+
+=== Protocol flow
+
+[source]
+----
+VEN                                                  VTN
+ │ POST EiRegisterParty  oadrCreatePartyRegistration  │
+ │───────────────────────────────────────────────────►│
+ │◄───────────────────────────────────────────────────│ oadrCreatedPartyRegistration (venID, registrationID, pollFreq)
+ │ POST EiReport         oadrRegisterReport (METADATA)│
+ │───────────────────────────────────────────────────►│
+ │ POST EiEvent          oadrPoll        (every pollInterval)
+ │───────────────────────────────────────────────────►│
+ │◄───────────────────────────────────────────────────│ oadrDistributeEvent (eiEvent: SIMPLE level / PRICE, dtstart, duration)
+ │ POST EiEvent          oadrCreatedEvent (optIn|optOut)
+ │───────────────────────────────────────────────────►│
+ │ POST EiReport         oadrUpdateReport (TELEMETRY_USAGE: grid power, ESS power)
+ │───────────────────────────────────────────────────►│
+ │ POST EiOpt            oadrCreateOpt   (user changes opt state in the UI)
+ │───────────────────────────────────────────────────►│
+----
+
+=== Curtailment logic
+
+In every cycle the controller evaluates the active event (if any):
+
+[cols="1,3", options="header"]
+|===
+|Signal |Behaviour
+
+|`SIMPLE` level `0` (normal) |No curtailment
+|`SIMPLE` level `1`–`3` (moderate / high / special) |Curtailment active
+|`PRICE` above `priceSignalThresholdPerMwh` |Curtailment active
+|`PRICE` at or below threshold |No curtailment
+|===
+
+While curtailment is active and the event is opted-in:
+
+* **ESS**: `setActivePowerLessOrEquals(curtailmentEssDischargeLimitW)` on the `ManagedSymmetricEss` – the ESS may still charge (e.g. from PV surplus) but does not feed the building or the grid beyond the limit.
+* **EVCS**: `setChargePowerLimit(curtailmentEvcsChargeLimitW)` on every `ManagedEvcs`; EVSE single controllers receive the equivalent limit.
+* **Heat pumps**: SG-Ready controllers are set to `LOCK` (state 1).
+
+Events that are opted-out or outside the configured `marketContext` are ignored. Curtailment ends with the event's `dtstart + duration` (or an `oadrDistributeEvent` with status `cancelled`).
+
+=== Channels
+
+[cols="2,1,4", options="header"]
+|===
+|Channel |Type |Description
+
+|`RegistrationState` |enum |`UNREGISTERED`, `REGISTERING`, `REGISTERED`, `FAILED`
+|`VenId` |STRING |VEN-ID assigned by the VTN
+|`ActiveEventId` |STRING |ID of the currently active event
+|`ActiveEventSignalLevel` |INTEGER |`SIMPLE` level of the active event, `-1` if none
+|`ActiveEventPrice` |DOUBLE |`PRICE` value of the active event (`Currency/MWh`)
+|`ActiveEventStart` / `ActiveEventEnd` |LONG |Epoch seconds
+|`EventCount` |INTEGER |Number of events received since activation
+|`OptState` |enum |`OPT_IN`, `OPT_OUT` for the active event
+|`SetOptState` |WRITE enum |Written by the UI to change the opt state
+|`CurtailmentActive` |BOOLEAN |`true` while limits are applied
+|`LastPoll` |LONG |Epoch seconds of the last `oadrPoll`
+|`HttpStatusCode` |INTEGER |HTTP status of the last request
+|`CommunicationFailed` |STATE (fault) |Set when the VTN cannot be reached
+|===
+
+=== JSON-RPC
+
+The controller implements `ComponentJsonApi` (see xref:component-communication/index.adoc[Component Communication]):
+
+[source,json]
+----
+{ "method": "getActiveEvents", "params": {} }
+→ { "events": [ { "eventId": "evt-1", "signalType": "SIMPLE", "level": 2, "price": null,
+                  "start": 1717000000, "end": 1717003600, "optState": "OPT_IN" } ] }
+
+{ "method": "setOptState", "params": { "eventId": "evt-1", "optState": "OPT_OUT" } }
+----
+
+.OpenADR widget in OpenEMS UI live view (placeholder)
+image::us-grid/openadr-widget-ui.png[OpenADR widget]
+
+
+== VTN simulator: `Openadr.Vtn` (OpenEMS Backend)
+
+[cols="1,3"]
+|===
+|Bundle |`io.openems.backend.openadr.vtn`
+|PID |`Openadr.Vtn`
+|HTTP server |Felix Jetty servlets (same pattern as `io.openems.backend.b2brest`)
+|===
+
+The simulator implements enough of the VTN side to test the VEN end-to-end: party registration, event distribution, opt handling and report acceptance. All state (VENs, events, reports) is held in memory and lost on restart.
+
+=== Configuration
+
+[cols="2,1,1,4", options="header"]
+|===
+|Property |Type |Default |Description
+
+|`port` |int |`8082` |HTTP(S) port
+|`path` |String |`/OpenADR2/Simple/2.0b` |Base path of the OpenADR services
+|`vtnId` |String |`openems-vtn` |VTN-ID reported to VENs
+|`requireTls` |boolean |`false` |Serve HTTPS using `keyStorePath` / `keyStorePassword`. Leave `false` for local simulation and configure the VEN with `http://` and `tls = TRUST_ALL`.
+|`keyStorePath`, `keyStorePassword` |String | |PKCS#12 key store for TLS
+|===
+
+=== Endpoints
+
+[cols="1,1,3", options="header"]
+|===
+|Method |Path (relative to `path`) |Description
+
+|POST |`/EiRegisterParty` |`oadrCreatePartyRegistration`, `oadrQueryRegistration`, `oadrCancelPartyRegistration`
+|POST |`/EiEvent` |`oadrPoll` → `oadrDistributeEvent` or `oadrResponse`; `oadrCreatedEvent`
+|POST |`/EiReport` |`oadrRegisterReport`, `oadrUpdateReport`
+|POST |`/EiOpt` |`oadrCreateOpt`, `oadrCancelOpt`
+|GET |`/admin/vens` |Registered VENs (`venId`, `venName`, `registrationId`, `lastPoll`)
+|GET |`/admin/events` |All events with their opt states per VEN
+|POST |`/admin/events` |Create an event (see below)
+|DELETE |`/admin/events/\{id}` |Cancel an event; the VEN receives it as `cancelled` at its next poll
+|===
+
+Create an event:
+
+[source,bash]
+----
+curl -X POST http://localhost:8082/OpenADR2/Simple/2.0b/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "venId": null,
+        "signalType": "SIMPLE",
+        "level": 2,
+        "start": "2025-07-15T17:00:00Z",
+        "durationMinutes": 120,
+        "marketContext": "http://openems.io/demo"
+      }'
+----
+
+`venId = null` targets all registered VENs. For a price event use `"signalType": "PRICE", "price": 250.0` (in `Currency/MWh`).
+
+== References
+
+* https://www.openadr.org/specification[OpenADR 2.0b Profile Specification]
+* https://www.openadr.org/assets/openadr_drprogramguide_v1.0.pdf[OpenADR DR Program Implementation Guide]

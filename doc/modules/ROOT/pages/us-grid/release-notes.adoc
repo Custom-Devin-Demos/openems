@@ -1,0 +1,93 @@
+= Release Notes: US Grid Integration
+:sectnums:
+:sectnumlevels: 4
+:toclevels: 4
+:experimental:
+:keywords: AsciiDoc
+:source-highlighter: highlight.js
+:icons: font
+:imagesdir: ../../assets/images
+
+This page summarizes everything that is added by the US grid integration and what operators and integrators need to change.
+
+== New bundles and components
+
+[cols="3,2,1,3", options="header"]
+|===
+|Bundle |Factory PID |Runs on |Documentation
+
+|`io.openems.edge.timeofusetariff.comed` |`TimeOfUseTariff.ComEd` |Edge |xref:us-grid/comed.adoc[ComEd Hourly Pricing]
+|`io.openems.edge.timeofusetariff.pjm` |`TimeOfUseTariff.PJM` |Edge |xref:us-grid/pjm.adoc[PJM Day-Ahead LMPs]
+|`io.openems.edge.greenbutton` |`GreenButton.Import` |Edge |xref:us-grid/greenbutton.adoc[Green Button Import]
+|`io.openems.edge.controller.api.openadr` |`Controller.Api.OpenADR` |Edge |xref:us-grid/openadr.adoc[OpenADR]
+|`io.openems.backend.openadr.vtn` |`Openadr.Vtn` |Backend |xref:us-grid/openadr.adoc#_vtn_simulator_openadr_vtn_openems_backend[OpenADR VTN simulator]
+|===
+
+== Changes to existing bundles
+
+[cols="2,4", options="header"]
+|===
+|Bundle |Change
+
+|`io.openems.common` (`CurrencyConfig`), `io.openems.edge.common` (`Currency`) |New currency `USD` (`$`, `Cent`, factor 100). Existing configurations with `EUR`, `SEK`, `CHF` are unaffected.
+|`io.openems.edge.timedata.api` |New default method `Timedata.writeHistoricData(ChannelAddress, SortedMap<ZonedDateTime, JsonElement>)`. The default implementation throws `OpenemsException("Historic write not supported")`; existing `Timedata` implementations keep compiling.
+|`io.openems.edge.timedata.influxdb` |Implements `writeHistoricData`
+|`io.openems.edge.simulator` (`Simulator.Timedata`) |Implements `writeHistoricData` (in memory); new US simulator scenario
+|`io.openems.edge.timedata.rrd4j` |Documents that historic writes are not supported
+|`io.openems.edge.controller.ess.timeofusetariff`, `io.openems.edge.energy` |Additional tests with US price shapes (ComEd / PJM day-ahead curves); no behaviour change
+|`ui/` |`USD` currency, widgets for `TimeOfUseTariff.ComEd` / `TimeOfUseTariff.PJM` prices, `GreenButton.Import` status and `Controller.Api.OpenADR` (live widget with opt-in/opt-out, history), English and German translations
+|===
+
+== Required `-runrequires` entries
+
+The new bundles are auto-discovered by the bnd workspace and built by `./gradlew build`, but they only become part of the `EdgeApp`/`BackendApp` assemblies when they are listed in the respective `.bndrun`. Add the following entries and regenerate the `-runbundles` section with `./gradlew resolve` (CI validates that the checked-in bndrun files match the resolve result):
+
+.`io.openems.edge.application/EdgeApp.bndrun`
+[source]
+----
+-runrequires: \
+	...
+	bnd.identity;id='io.openems.edge.timeofusetariff.comed',\
+	bnd.identity;id='io.openems.edge.timeofusetariff.pjm',\
+	bnd.identity;id='io.openems.edge.greenbutton',\
+	bnd.identity;id='io.openems.edge.controller.api.openadr',\
+	...
+----
+
+.`io.openems.backend.application/BackendApp.bndrun`
+[source]
+----
+-runrequires: \
+	...
+	bnd.identity;id='io.openems.backend.openadr.vtn',\
+	...
+----
+
+Then:
+
+[source,bash]
+----
+./gradlew resolve
+git diff io.openems.edge.application/EdgeApp.bndrun io.openems.backend.application/BackendApp.bndrun
+----
+
+== Dependencies
+
+No new third-party dependencies. HTTP access uses `io.openems.edge.bridge.http` (edge) and the Felix Jetty bundles already used by `io.openems.backend.b2brest` (backend); XML handling uses the JDK `javax.xml` APIs via `io.openems.common.utils.XmlUtils`.
+
+== Continuous integration
+
+The `Build OpenEMS` workflow (`.github/workflows/build.yml`) gains a job `us-grid-tests` which runs the unit tests of the five new bundles with `--continue` and uploads the JUnit XML reports as workflow artifact `us-grid-test-reports`. The job only includes bundles whose directory exists in the checkout, so it is green on branches where not all bundles have been merged yet.
+
+== Migration and compatibility notes
+
+* The new `TimeOfUseTariff` providers are additive; existing providers (aWATTar, Tibber, ENTSO-E, ...) are unchanged.
+* Setting `Core.Meta` → `Currency` to `USD` changes the currency label in the UI and the unit in which all price channels are interpreted. Existing price data in Timedata is not converted.
+* `Controller.Api.OpenADR` applies ESS limits through the standard power constraints and therefore interacts with other ESS controllers via the Scheduler order like any other controller. Place it before the Time-of-Use-Tariff controller in the Scheduler if curtailment must always win.
+* The `Openadr.Vtn` Backend component is a simulator for development and demonstration. It is not a certified VTN and must not be exposed to the internet.
+
+== Known limitations / open points
+
+* `TimeOfUseTariff.ComEd` real-time feeds (`FIVE_MINUTE`, `CURRENT_HOUR_AVERAGE`) only provide current prices; the energy scheduler needs `DAY_AHEAD` for a meaningful outlook.
+* Green Button import into `Timedata.Rrd4j` is not possible.
+* OpenADR: only the 2.0b pull model with `SIMPLE` and `PRICE` signals is implemented; `LOAD_DISPATCH`/`LOAD_CONTROL` signals, push mode (`oadrRequestEvent` initiated by the VTN) and XML signature (`oadrSignedObject`) are out of scope.
