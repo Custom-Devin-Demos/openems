@@ -169,9 +169,10 @@ describe("Controller/Api/OpenAdr", () => {
             expect(chartData.input.map((el) => el.powerChannel.toString())).toEqual([
                 "ctrlOpenAdr0/CurtailmentActive", "ctrlOpenAdr0/ActiveEventSignalLevel",
             ]);
+            // the shared history chart divides all input channels by 1000 before output()
             const output = chartData.output({
-                CurtailmentActive: [null, 0, 1, 1, 0],
-                ActiveEventSignalLevel: [-1, -1, 2, 2, -1],
+                CurtailmentActive: [null, 0, 0.001, 0.001, 0],
+                ActiveEventSignalLevel: [-0.001, -0.001, 0.002, 0.002, -0.001],
             });
             expect(output[0].converter()).toEqual([null, 0, 1, 1, 0]);
             expect(output[1].converter()).toEqual([null, null, 2, 2, null]);

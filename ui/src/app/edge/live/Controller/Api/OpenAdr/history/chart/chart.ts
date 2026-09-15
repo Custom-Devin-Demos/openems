@@ -58,7 +58,7 @@ export class ControllerApiOpenAdrChartComponent extends AbstractHistoryChart {
                 {
                     name: translate.instant("EDGE.INDEX.WIDGETS.OPEN_ADR.SIGNAL_LEVEL"),
                     converter: () => data[OpenAdrUtils.CHANNEL_ACTIVE_EVENT_SIGNAL_LEVEL]
-                        ?.map((value) => value == null || value < 0 ? null : value) ?? [],
+                        ?.map((value) => value == null || value < 0 ? null : Math.round(value * 1000)) ?? [],
                     color: ChartConstants.Colors.BLUE_GREY,
                     yAxisId: ChartAxis.RIGHT,
                     borderDash: [10, 10],
